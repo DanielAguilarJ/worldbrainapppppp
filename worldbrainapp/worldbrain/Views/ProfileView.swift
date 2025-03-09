@@ -863,4 +863,13 @@ extension ActivityHistoryView {
         }
         
         // Actualizar último día activo
-        UserDefaults.standard.
+        UserDefaults.standard.set(today, forKey: "lastActiveDay")
+    }
+}
+
+// Vista previa
+struct ProfileView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProfileView(xpManager: XPManager())
+    }
+}
