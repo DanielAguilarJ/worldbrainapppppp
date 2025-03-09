@@ -146,6 +146,7 @@ struct StageLessonsView: View {
                         stage: stage,
                         lessonNumber: getLessonNumber(lesson),
                         totalLessons: stage.lessons.count,
+                        xpManager: xpManager,  // Pasando el xpManager
                         onStart: {
                             showingLessonPopup = false
                             showingLesson = true
@@ -270,11 +271,15 @@ struct LessonCircleNode: View {
                         }
                 }
                 
-                // Círculo principal
+                // Círculo principal - FIX: Asegurarnos que ambos lados del ternario son LinearGradient
                 Circle()
                     .fill(
                         lesson.isLocked ?
-                            Color.gray.opacity(0.5) :
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.gray.opacity(0.6), Color.gray.opacity(0.4)]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ) :
                             LinearGradient(
                                 gradient: Gradient(colors: [stageColor.opacity(0.9), stageColor]),
                                 startPoint: .topLeading,
@@ -351,6 +356,7 @@ struct LessonPopup: View {
     let stage: Stage
     let lessonNumber: Int
     let totalLessons: Int
+    let xpManager: XPManager  // FIX: Agregando xpManager como propiedad
     let onStart: () -> Void
     let onClose: () -> Void
     

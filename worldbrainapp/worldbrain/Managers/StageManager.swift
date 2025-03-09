@@ -58,7 +58,7 @@ class StageManager: ObservableObject {
         stages = [greenStage, blueStage, redStage, blackStage]
     }
     
-    /// Genera las 10 lecciones de la Etapa Verde con lecturas de distintos temas y 2 entrenamientos oculares
+    /// Genera las 11 lecciones de la Etapa Verde con lecturas de distintos temas, entrenamientos oculares y visión periférica
     private func generateGreenStageLessons() -> [Lesson] {
         var lessons: [Lesson] = []
         
@@ -70,7 +70,7 @@ class StageManager: ObservableObject {
                 type: .reading,
                 timeLimit: 180,
                 content: """
-                Desde los antiguos sumerios hasta las civilizaciones modernas, la escritura ha sido una herramienta esencial para transmitir conocimiento. Los sumerios desarrollaron una de las primeras formas de escritura llamadas 'cuneiforme', hecha a base de marcas en tablillas de arcilla...
+                Desde los antiguos sumerios hasta las civilizaciones modernas, la escritura ha sido una herramienta esencial para transmitir conocimiento. Los sumerios desarrollaron una de las primera[...]
                 """,
                 questions: [
                     Question(
@@ -94,7 +94,8 @@ class StageManager: ObservableObject {
                         correctAnswer: 3
                     )
                 ],
-                eyeExercises: nil
+                eyeExercises: nil,
+                pyramidExercise: nil
             )
         )
         
@@ -106,7 +107,7 @@ class StageManager: ObservableObject {
                 type: .reading,
                 timeLimit: 180,
                 content: """
-                El cuerpo humano está compuesto por trillones de células que trabajan de forma coordinada. Cada célula contiene información genética almacenada en el ADN, el cual dirige el crecimiento y funcionamiento del organismo...
+                El cuerpo humano está compuesto por trillones de células que trabajan de forma coordinada. Cada célula contiene información genética almacenada en el ADN, el cual dirige el crecim[...]
                 """,
                 questions: [
                     Question(
@@ -130,7 +131,8 @@ class StageManager: ObservableObject {
                         correctAnswer: 3
                     )
                 ],
-                eyeExercises: nil
+                eyeExercises: nil,
+                pyramidExercise: nil
             )
         )
         
@@ -142,7 +144,7 @@ class StageManager: ObservableObject {
                 type: .reading,
                 timeLimit: 180,
                 content: """
-                El café es una de las bebidas más consumidas en el mundo. Desde el espresso italiano hasta el café de olla en México, cada cultura ha desarrollado su forma única de prepararlo. El ritual de tomar café puede variar, pero en todas partes es símbolo de hospitalidad y convivencia...
+                El café es una de las bebidas más consumidas en el mundo. Desde el espresso italiano hasta el café de olla en México, cada cultura ha desarrollado su forma única de prepararlo. El[...]
                 """,
                 questions: [
                     Question(
@@ -166,7 +168,8 @@ class StageManager: ObservableObject {
                         correctAnswer: 0
                     )
                 ],
-                eyeExercises: nil
+                eyeExercises: nil,
+                pyramidExercise: nil
             )
         )
         
@@ -178,7 +181,7 @@ class StageManager: ObservableObject {
                 type: .reading,
                 timeLimit: 180,
                 content: """
-                Practicar la respiración consciente puede mejorar la concentración y disminuir el estrés. Al inhalar profundamente y exhalar lentamente, el ritmo cardiaco se regula y la mente se vuelve más clara...
+                Practicar la respiración consciente puede mejorar la concentración y disminuir el estrés. Al inhalar profundamente y exhalar lentamente, el ritmo cardiaco se regula y la mente se vu[...]
                 """,
                 questions: [
                     Question(
@@ -192,7 +195,8 @@ class StageManager: ObservableObject {
                         correctAnswer: 3
                     )
                 ],
-                eyeExercises: nil
+                eyeExercises: nil,
+                pyramidExercise: nil
             )
         )
         
@@ -222,43 +226,62 @@ class StageManager: ObservableObject {
                         duration: 60,
                         instructions: "Sigue el punto rojo en movimiento circular"
                     )
-                ]
+                ],
+                pyramidExercise: nil
             )
         )
         
-        // Lección 6 (Lectura: Medio ambiente)
+        // Lección 6 (Visión periférica - NUEVA LECCIÓN)
         lessons.append(
             Lesson(
-                title: "Principiante - Lección 6",
-                description: "Bosques tropicales y su biodiversidad",
-                type: .reading,
-                timeLimit: 180,
-                content: """
-                Los bosques tropicales cubren solo un pequeño porcentaje de la superficie terrestre, pero albergan cerca de la mitad de las especies animales y vegetales del planeta. Proteger estos ecosistemas es vital para el equilibrio climático y la conservación de la diversidad biológica...
-                """,
+                title: "Principiante - Visión Periférica 6",
+                description: "Entrenamiento de visión periférica con textos en pirámide",
+                type: .peripheralVision,
+                timeLimit: 240,
+                content: "",
                 questions: [
                     Question(
-                        text: "¿Qué porcentaje aproximado de la superficie terrestre cubren los bosques tropicales?",
+                        text: "¿Cuál es uno de los principales beneficios de entrenar la visión periférica?",
                         options: [
-                            "Menos del 10%",
-                            "Cerca del 25%",
-                            "Más del 50%",
-                            "Entre 30% y 40%"
+                            "Mejorar la visión central únicamente",
+                            "Aumentar la velocidad de lectura",
+                            "Reducir la capacidad de concentración",
+                            "Eliminar la necesidad de anteojos"
                         ],
-                        correctAnswer: 0
+                        correctAnswer: 1
                     ),
                     Question(
-                        text: "¿Por qué es crucial la protección de los bosques tropicales?",
+                        text: "Durante el ejercicio de texto en pirámide, ¿en qué parte debe enfocarse la mirada?",
                         options: [
-                            "Porque los seres humanos no viven allí",
-                            "Contienen gran parte de la biodiversidad y regulan el clima",
-                            "No afectan el clima, solo la economía",
-                            "Son la base de la agricultura intensiva"
+                            "En todo el texto completo",
+                            "En la palabra resaltada en verde",
+                            "En la primera línea solamente",
+                            "En la última línea solamente"
                         ],
                         correctAnswer: 1
                     )
                 ],
-                eyeExercises: nil
+                eyeExercises: nil,
+                pyramidExercise: PyramidTextExercise(
+                    title: "Naturaleza y Bienestar",
+                    description: "Ejercicio para expandir tu visión periférica con texto sobre la naturaleza",
+                    introText: "Mantén la mirada en la palabra resaltada y trata de percibir todo el párrafo sin mover tus ojos.",
+                    paragraphs: [
+                        PyramidTextExercise.PyramidParagraph(
+                            text: "Los       bosques       son\npulmones    naturales    que\npurifican   el   aire   que\nrespiramos  cada  día\ny nos dan vida.",
+                            focusPoint: "aire"
+                        ),
+                        PyramidTextExercise.PyramidParagraph(
+                            text: "El     contacto     con\nla   naturaleza   reduce\nel    estrés    mental\ny   nos   conecta\ncon la tierra.",
+                            focusPoint: "estrés"
+                        ),
+                        PyramidTextExercise.PyramidParagraph(
+                            text: "Caminar       entre       árboles\nmejora      nuestro      estado\nde     ánimo     y     nos\nayuda a encontrar paz\ny tranquilidad.",
+                            focusPoint: "encontrar"
+                        )
+                    ],
+                    difficulty: 1
+                )
             )
         )
         
@@ -270,7 +293,7 @@ class StageManager: ObservableObject {
                 type: .reading,
                 timeLimit: 180,
                 content: """
-                Galileo Galilei fue uno de los primeros en utilizar el telescopio para observar el cielo. Sus descubrimientos, como las lunas de Júpiter y las fases de Venus, desafiaron la visión geocéntrica y allanaron el camino para la astronomía moderna...
+                Galileo Galilei fue uno de los primeros en utilizar el telescopio para observar el cielo. Sus descubrimientos, como las lunas de Júpiter y las fases de Venus, desafiaron la visión ge[...]
                 """,
                 questions: [
                     Question(
@@ -294,7 +317,8 @@ class StageManager: ObservableObject {
                         correctAnswer: 2
                     )
                 ],
-                eyeExercises: nil
+                eyeExercises: nil,
+                pyramidExercise: nil
             )
         )
         
@@ -306,7 +330,7 @@ class StageManager: ObservableObject {
                 type: .reading,
                 timeLimit: 180,
                 content: """
-                La inteligencia artificial se ha vuelto cada vez más común en aplicaciones cotidianas. Desde los asistentes virtuales en nuestros teléfonos hasta los algoritmos de recomendación en redes sociales, la IA analiza datos masivos para ofrecer respuestas rápidas y personalizadas...
+                La inteligencia artificial se ha vuelto cada vez más común en aplicaciones cotidianas. Desde los asistentes virtuales en nuestros teléfonos hasta los algoritmos de recomendación en[...]
                 """,
                 questions: [
                     Question(
@@ -320,7 +344,8 @@ class StageManager: ObservableObject {
                         correctAnswer: 1
                     )
                 ],
-                eyeExercises: nil
+                eyeExercises: nil,
+                pyramidExercise: nil
             )
         )
         
@@ -332,7 +357,7 @@ class StageManager: ObservableObject {
                 type: .reading,
                 timeLimit: 180,
                 content: """
-                Las vitaminas y minerales son micronutrientes fundamentales para el correcto funcionamiento del cuerpo. Por ejemplo, la vitamina C fortalece el sistema inmunológico, mientras que el hierro interviene en el transporte de oxígeno en la sangre...
+                Las vitaminas y minerales son micronutrientes fundamentales para el correcto funcionamiento del cuerpo. Por ejemplo, la vitamina C fortalece el sistema inmunológico, mientras que el h[...]
                 """,
                 questions: [
                     Question(
@@ -346,7 +371,8 @@ class StageManager: ObservableObject {
                         correctAnswer: 2
                     )
                 ],
-                eyeExercises: nil
+                eyeExercises: nil,
+                pyramidExercise: nil
             )
         )
         
@@ -375,11 +401,55 @@ class StageManager: ObservableObject {
                         duration: 60,
                         instructions: "Amplía tu visión lateral intentando detectar estímulos en los bordes de la pantalla"
                     )
-                ]
+                ],
+                pyramidExercise: nil
             )
         )
         
-        // Listo, 10 lecciones
+        // Lección 11 (Visión periférica - Segunda lección)
+        lessons.append(
+            Lesson(
+                title: "Principiante - Visión Periférica 11",
+                description: "Texto en pirámide de dificultad media para ampliar tu percepción visual",
+                type: .peripheralVision,
+                timeLimit: 240,
+                content: "",
+                questions: [
+                    Question(
+                        text: "¿Cuál es la principal diferencia entre la lectura normal y la lectura con visión periférica?",
+                        options: [
+                            "La primera requiere movimientos oculares y la segunda mantiene la mirada fija",
+                            "La primera utiliza el cerebro y la segunda solo los ojos",
+                            "La primera es más rápida que la segunda",
+                            "No hay diferencia significativa entre ambas"
+                        ],
+                        correctAnswer: 0
+                    )
+                ],
+                eyeExercises: nil,
+                pyramidExercise: PyramidTextExercise(
+                    title: "Astronomía y Universo",
+                    description: "Amplía tu visión periférica con información sobre el cosmos",
+                    introText: "Enfoca tu mirada en la palabra destacada e intenta percibir todo el texto sin mover los ojos.",
+                    paragraphs: [
+                        PyramidTextExercise.PyramidParagraph(
+                            text: "Las        galaxias        contienen\nmillones     de     estrellas     que\nbrillaron   mucho   antes   de\nque    existiera    la\nhumanidad en la Tierra.",
+                            focusPoint: "mucho"
+                        ),
+                        PyramidTextExercise.PyramidParagraph(
+                            text: "Nuestro      sol      es\nuna    estrella    de\ntamaño   medio   que\nilumina  nuestro\nsistema solar.",
+                            focusPoint: "medio"
+                        ),
+                        PyramidTextExercise.PyramidParagraph(
+                            text: "El      universo      se\nexpande   constantemente   hacia\nel    infinito    desde\nel  Big  Bang\nhasta hoy.",
+                            focusPoint: "infinito"
+                        )
+                    ],
+                    difficulty: 2
+                )
+            )
+        )
+        
         return lessons
     }
     
@@ -414,4 +484,3 @@ class StageManager: ObservableObject {
         objectWillChange.send()
     }
 }
-
