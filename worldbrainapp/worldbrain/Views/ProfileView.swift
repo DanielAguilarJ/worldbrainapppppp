@@ -12,10 +12,18 @@ struct ProfileView: View {
     @AppStorage("userName") private var userName: String = "Usuario"
     @AppStorage("userEmail") private var userEmail: String = "usuario@ejemplo.com"
     @State private var showEditProfile = false
-    @State private var tempUserName: String = ""
-    @State private var tempUserEmail: String = ""
     @State private var selectedAvatar: Int = UserDefaults.standard.integer(forKey: "selectedAvatar")
     @State private var showingLogoutAlert = false
+    
+    // Configuración
+    @AppStorage("notifications") private var notificationsEnabled = true
+    @AppStorage("darkMode") private var darkModeEnabled = false
+    @AppStorage("soundEffects") private var soundEffectsEnabled = true
+    
+    // Estadísticas de usuario
+    @AppStorage("completedSessions") private var completedSessions: Int = 0
+    @AppStorage("streakDays") private var streakDays: Int = 0
+    @AppStorage("totalTimeSpent") private var totalTimeSpent: Int = 0 // en minutos
     
     // Cálculos para el nivel basado en XP
     var userLevel: Int {
@@ -34,14 +42,16 @@ struct ProfileView: View {
         return (userLevel + 1) * 100
     }
     
-    // Total de sesiones completadas (demo)
-    var completedSessions: Int {
-        return UserDefaults.standard.integer(forKey: "completedSessions")
-    }
-    
-    // Días consecutivos (demo)
-    var streakDays: Int {
-        return UserDefaults.standard.integer(forKey: "streakDays")
+    // Formateo del tiempo total
+    var formattedTimeSpent: String {
+        let hours = totalTimeSpent / 60
+        let minutes = totalTimeSpent % 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
     }
     
     // Avatares disponibles
@@ -49,72 +59,139 @@ struct ProfileView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                // Fondo con gradiente
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.purple.opacity(0.7), Color.blue.opacity(0.4)]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Cabecera del perfil
-                        ProfileHeaderView(
-                            userName: userName,
-                            userLevel: userLevel,
-                            readerLevel: xpManager.readerLevel,
-                            levelProgress: levelProgress,
-                            xp: xpManager.currentXP,
-                            xpForNextLevel: xpForNextLevel,
-                            selectedAvatar: selectedAvatar,
-                            avatars: avatars,
-                            onEditProfile: { showEditProfile = true }
-                        )
-                        .padding(.top, geometry.safeAreaInsets.top + 20)
-                        
-                        // Estadísticas del usuario
-                        StatsCardView(
-                            completedSessions: completedSessions,
-                            streakDays: streakDays
-                        )
-                        
-                        // Logros
-                        AchievementsView(xp: xpManager.currentXP)
-                        
-                        // Historial de actividad
-                        ActivityHistoryView()
-                        
-                        // Configuración y opciones
-                        SettingsCardView(
-                            onLogout: { showingLogoutAlert = true }
-                        )
-                        
-                        Spacer(minLength: 30)
-                    }
-                    .padding(.horizontal)
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Cabecera del perfil
+                    ProfileHeaderView(
+                        userName: userName,
+                        userLevel: userLevel,
+                        readerLevel: xpManager.readerLevel,
+                        levelProgress: levelProgress,
+                        xp: xpManager.currentXP,
+                        xpForNextLevel: xpForNextLevel,
+                        selectedAvatar: selectedAvatar,
+                        avatars: avatars,
+                        onEditProfile: { showEditProfile = true }
+                    )
+                    .padding(.top, 20)
+                    
+                    // Estadísticas del usuario
+                    StatsCardView(
+                        completedSessions: completedSessions,
+                        streakDays: streakDays,
+                        timeSpent: formattedTimeSpent
+                    )
+                    
+                    // Logros
+                    AchievementsView(xp: xpManager.currentXP, completedSessions: completedSessions, streakDays: streakDays)
+                    
+                    // Historial de actividad
+                    ActivityHistoryView()
+                    
+                    // Configuración y opciones
+                    SettingsCardView(
+                        notificationsEnabled: $notificationsEnabled,
+                        darkModeEnabled: $darkModeEnabled,
+                        soundEffectsEnabled: $soundEffectsEnabled,
+                        onLogout: { showingLogoutAlert = true }
+                    )
+                    
+                    // Espacio extra para la barra de tabs
+                    Spacer(minLength: 90)
                 }
-            }
-            .sheet(isPresented: $showEditProfile) {
-                EditProfileView(
-                    userName: $userName,
-                    userEmail: $userEmail,
-                    selectedAvatar: $selectedAvatar,
-                    avatars: avatars
+                .padding(.horizontal)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.purple.opacity(0.7), Color.blue.opacity(0.4)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .ignoresSafeArea()
                 )
             }
-            .alert("Cerrar sesión", isPresented: $showingLogoutAlert) {
-                Button("Cancelar", role: .cancel) {}
-                Button("Cerrar sesión", role: .destructive) {
-                    // Aquí puedes agregar la lógica para cerrar sesión
-                }
-            } message: {
-                Text("¿Estás seguro de que quieres cerrar sesión?")
-            }
+            .edgesIgnoringSafeArea(.all)
         }
-        .navigationBarHidden(true)
-        .edgesIgnoringSafeArea(.all)
+        .sheet(isPresented: $showEditProfile) {
+            EditProfileView(
+                userName: $userName,
+                userEmail: $userEmail,
+                selectedAvatar: $selectedAvatar,
+                avatars: avatars
+            )
+        }
+        .alert("Cerrar sesión", isPresented: $showingLogoutAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Cerrar sesión", role: .destructive) {
+                // Aquí iría la lógica para cerrar sesión
+                userName = "Usuario"
+                userEmail = "usuario@ejemplo.com"
+            }
+        } message: {
+            Text("¿Estás seguro de que quieres cerrar sesión?")
+        }
+        .onChange(of: darkModeEnabled) { newValue in
+            applyDarkMode(newValue)
+        }
+        .onChange(of: soundEffectsEnabled) { newValue in
+            applySoundEffects(newValue)
+        }
+        .onChange(of: notificationsEnabled) { newValue in
+            applyNotifications(newValue)
+        }
+    }
+    
+    // Funciones para aplicar configuraciones
+    private func applyDarkMode(_ enabled: Bool) {
+        // Utiliza UIApplication para configurar el modo de apariencia
+        // Esto requeriría más código para integrarse completamente
+        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+        let window = windowScene?.windows.first
+        window?.overrideUserInterfaceStyle = enabled ? .dark : .light
+    }
+    
+    private func applySoundEffects(_ enabled: Bool) {
+        // Aquí se configuraría el sistema de sonido
+        // Por ahora solo guardamos la preferencia
+        UserDefaults.standard.set(enabled, forKey: "soundEffects")
+    }
+    
+    private func applyNotifications(_ enabled: Bool) {
+        if enabled {
+            // Solicitar permisos de notificaciones
+            let center = UNUserNotificationCenter.current()
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                if granted {
+                    // Permisos concedidos, configurar notificaciones
+                    configureNotifications()
+                } else {
+                    // Permisos denegados, actualizar el estado
+                    DispatchQueue.main.async {
+                        notificationsEnabled = false
+                    }
+                }
+            }
+        } else {
+            // Desactivar notificaciones
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        }
+    }
+    
+    private func configureNotifications() {
+        // Configurar recordatorio diario
+        let content = UNMutableNotificationContent()
+        content.title = "¡Hora de practicar!"
+        content.body = "No pierdas tu racha diaria. Un breve ejercicio te ayudará a mejorar."
+        content.sound = UNNotificationSound.default
+        
+        // Notificar a las 5 PM cada día
+        var dateComponents = DateComponents()
+        dateComponents.hour = 17
+        dateComponents.minute = 0
+        
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "dailyReminder", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request)
     }
 }
 
@@ -233,6 +310,7 @@ struct ProfileHeaderView: View {
 struct StatsCardView: View {
     let completedSessions: Int
     let streakDays: Int
+    let timeSpent: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -267,9 +345,9 @@ struct StatsCardView: View {
                     .background(Color.white.opacity(0.3))
                     .padding(.vertical, 5)
                 
-                // Tiempo de estudio (demo)
+                // Tiempo de estudio
                 StatItem(
-                    value: "2h 30m",
+                    value: timeSpent,
                     label: "Tiempo total",
                     icon: "clock.fill",
                     color: .blue
@@ -311,6 +389,8 @@ struct StatItem: View {
 // Sección de logros
 struct AchievementsView: View {
     let xp: Int
+    let completedSessions: Int
+    let streakDays: Int
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -326,7 +406,7 @@ struct AchievementsView: View {
                         description: "Completaste tu primer ejercicio",
                         icon: "star.fill",
                         color: .yellow,
-                        isUnlocked: true
+                        isUnlocked: completedSessions >= 1
                     )
                     
                     // Maestro de la memoria
@@ -335,16 +415,16 @@ struct AchievementsView: View {
                         description: "Completa 10 ejercicios de retención",
                         icon: "brain.head.profile",
                         color: .green,
-                        isUnlocked: xp >= 300
+                        isUnlocked: completedSessions >= 10
                     )
                     
                     // Velocidad lectora
                     AchievementItem(
                         title: "Velocidad lectora",
-                        description: "Alcanza 300 palabras por minuto",
+                        description: "Alcanza 300 puntos de XP",
                         icon: "speedometer",
                         color: .red,
-                        isUnlocked: xp >= 500
+                        isUnlocked: xp >= 300
                     )
                     
                     // Racha semanal
@@ -353,7 +433,7 @@ struct AchievementsView: View {
                         description: "7 días seguidos de práctica",
                         icon: "calendar.badge.clock",
                         color: .blue,
-                        isUnlocked: false
+                        isUnlocked: streakDays >= 7
                     )
                 }
                 .padding(.horizontal, 5)
@@ -414,13 +494,29 @@ struct AchievementItem: View {
 
 // Historial de actividad
 struct ActivityHistoryView: View {
-    // Datos de ejemplo para el historial
-    let activities = [
-        Activity(name: "Ejercicio de Retención", date: "Hoy", xp: 35, icon: "brain.head.profile"),
-        Activity(name: "Pares de Palabras", date: "Ayer", xp: 55, icon: "text.bubble.fill"),
-        Activity(name: "Palabras Desiguales", date: "02/03/2025", xp: 40, icon: "character.textbox"),
-        Activity(name: "Ejercicio de Retención", date: "01/03/2025", xp: 30, icon: "brain.head.profile")
-    ]
+    @AppStorage("recentActivities") private var recentActivitiesData: Data = Data()
+    
+    var recentActivities: [Activity] {
+        guard !recentActivitiesData.isEmpty else {
+            // Si no hay datos, devolver actividades de ejemplo
+            return defaultActivities
+        }
+        
+        do {
+            return try JSONDecoder().decode([Activity].self, from: recentActivitiesData)
+        } catch {
+            print("Error decodificando actividades: \(error)")
+            return defaultActivities
+        }
+    }
+    
+    // Actividades por defecto para cuando no hay datos
+    var defaultActivities: [Activity] {
+        return [
+            Activity(name: "Ejercicio de Retención", date: "Hoy", xp: 35, icon: "brain.head.profile"),
+            Activity(name: "Completa tu primer ejercicio", date: "Pendiente", xp: 0, icon: "flag.fill")
+        ]
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -428,7 +524,7 @@ struct ActivityHistoryView: View {
                 .font(.headline)
                 .foregroundColor(.white)
             
-            ForEach(activities) { activity in
+            ForEach(recentActivities.prefix(4)) { activity in
                 HStack {
                     Image(systemName: activity.icon)
                         .font(.system(size: 22))
@@ -449,21 +545,28 @@ struct ActivityHistoryView: View {
                     
                     Spacer()
                     
-                    Text("+\(activity.xp) XP")
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.yellow)
+                    if activity.xp > 0 {
+                        Text("+\(activity.xp) XP")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.yellow)
+                    } else {
+                        Text("Pendiente")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.gray)
+                    }
                 }
                 .padding(.vertical, 8)
                 
-                if activity.id != activities.last?.id {
+                if activity.id != recentActivities.prefix(4).last?.id {
                     Divider()
                         .background(Color.white.opacity(0.2))
                 }
             }
             
             Button(action: {
-                // Ver todo el historial
+                // Lógica para ver todas las actividades
             }) {
                 Text("Ver todo")
                     .font(.subheadline)
@@ -484,10 +587,10 @@ struct ActivityHistoryView: View {
 
 // Configuración
 struct SettingsCardView: View {
+    @Binding var notificationsEnabled: Bool
+    @Binding var darkModeEnabled: Bool
+    @Binding var soundEffectsEnabled: Bool
     let onLogout: () -> Void
-    @AppStorage("notifications") private var notificationsEnabled = true
-    @AppStorage("darkMode") private var darkModeEnabled = false
-    @AppStorage("soundEffects") private var soundEffectsEnabled = true
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -670,17 +773,94 @@ struct EditProfileView: View {
 }
 
 // Modelos de datos
-struct Activity: Identifiable {
-    let id = UUID()
+struct Activity: Identifiable, Codable {
+    let id: UUID
     let name: String
     let date: String
     let xp: Int
     let icon: String
-}
-
-// Vista previa
-struct ProfileView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProfileView(xpManager: XPManager())
+    
+    init(id: UUID = UUID(), name: String, date: String, xp: Int, icon: String) {
+        self.id = id
+        self.name = name
+        self.date = date
+        self.xp = xp
+        self.icon = icon
     }
 }
+
+// MARK: - Extensión de utilidad para añadir nuevas actividades
+extension ActivityHistoryView {
+    // Método estático para añadir una nueva actividad desde cualquier parte de la app
+    static func addActivity(name: String, xp: Int, icon: String) {
+        // Obtener la fecha actual formateada
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .short
+        let currentDate = dateFormatter.string(from: Date())
+        
+        // Crear la nueva actividad
+        let newActivity = Activity(name: name, date: currentDate, xp: xp, icon: icon)
+        
+        // Obtener actividades existentes
+        var currentActivities: [Activity] = []
+        if let data = UserDefaults.standard.data(forKey: "recentActivities") {
+            do {
+                currentActivities = try JSONDecoder().decode([Activity].self, from: data)
+            } catch {
+                print("Error decodificando actividades existentes: \(error)")
+            }
+        }
+        
+        // Añadir la nueva actividad al principio
+        currentActivities.insert(newActivity, at: 0)
+        
+        // Limitar a las 20 actividades más recientes
+        if currentActivities.count > 20 {
+            currentActivities = Array(currentActivities.prefix(20))
+        }
+        
+        // Guardar en UserDefaults
+        do {
+            let encodedData = try JSONEncoder().encode(currentActivities)
+            UserDefaults.standard.set(encodedData, forKey: "recentActivities")
+        } catch {
+            print("Error codificando actividades: \(error)")
+        }
+        
+        // Incrementar contador de sesiones completadas
+        let completedSessions = UserDefaults.standard.integer(forKey: "completedSessions")
+        UserDefaults.standard.set(completedSessions + 1, forKey: "completedSessions")
+        
+        // Actualizar tiempo total (supongamos que cada actividad consume X minutos en promedio)
+        let timeSpent = UserDefaults.standard.integer(forKey: "totalTimeSpent")
+        UserDefaults.standard.set(timeSpent + 15, forKey: "totalTimeSpent") // Añade 15 minutos por actividad
+        
+        // Actualizar racha diaria si es necesario
+        updateStreak()
+    }
+    
+    // Actualizar la racha diaria
+    static func updateStreak() {
+        let today = Calendar.current.startOfDay(for: Date())
+        
+        if let lastActiveDay = UserDefaults.standard.object(forKey: "lastActiveDay") as? Date {
+            let lastActive = Calendar.current.startOfDay(for: lastActiveDay)
+            
+            if lastActive == today {
+                // Ya se registró actividad hoy, no hacer nada
+                return
+            } else if let daysBetween = Calendar.current.dateComponents([.day], from: lastActive, to: today).day, daysBetween == 1 {
+                // Día consecutivo
+                let streak = UserDefaults.standard.integer(forKey: "streakDays")
+                UserDefaults.standard.set(streak + 1, forKey: "streakDays")
+            } else {
+                // Se rompió la racha
+                UserDefaults.standard.set(1, forKey: "streakDays")
+            }
+        } else {
+            // Primera actividad
+            UserDefaults.standard.set(1, forKey: "streakDays")
+        }
+        
+        // Actualizar último día activo
+        UserDefaults.standard.
