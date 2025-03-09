@@ -2,13 +2,14 @@
 //  ChallengesView.swift
 //  worldbrainapp
 //
-//  Muestra un gradiente y un card con “Ejercicio de Retención Aleatorio”
+//  Muestra un gradiente y cards para los diferentes desafíos
 //
 
 import SwiftUI
 
 struct ChallengesView: View {
     @State private var showingRetentionSheet = false
+    @State private var showingWordPairsFullScreen = false
     @State private var selectedExercise: RetentionExercise? = nil
     
     var body: some View {
@@ -21,64 +22,44 @@ struct ChallengesView: View {
             )
             .ignoresSafeArea(edges: .top)
             
-            VStack(spacing: 0) {
-                // Titulo
-                Text("Desafíos")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .padding(.top, 60)
-                    .padding(.bottom, 20)
-                
-                // Card con Retención
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color(UIColor.systemBackground))
-                        .shadow(color: .gray.opacity(0.3), radius: 5, x: 0, y: 3)
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Titulo
+                    Text("Desafíos")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.top, 60)
+                        .padding(.bottom, 20)
                     
-                    HStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Ejercicio de Retención")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            
-                            Text("Lee y responde")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                            
-                            Spacer().frame(height: 12)
-                            
-                            Button(action: {
-                                if let random = retentionExercises.randomElement() {
-                                    selectedExercise = random
-                                    showingRetentionSheet = true
-                                }
-                            }) {
-                                Text("INICIAR")
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.white)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 16)
-                                    .background(Color.blue)
-                                    .cornerRadius(20)
+                    // Card con Retención
+                    ChallengeCard(
+                        title: "Ejercicio de Retención",
+                        description: "Lee y responde",
+                        iconName: "brain.head.profile",
+                        iconColor: .green,
+                        action: {
+                            if let random = retentionExercises.randomElement() {
+                                selectedExercise = random
+                                showingRetentionSheet = true
                             }
                         }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "brain.head.profile")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 60, height: 60)
-                            .foregroundColor(.green)
-                            .padding(.trailing, 8)
-                    }
-                    .padding(16)
+                    )
+                    
+                    // Card con Pares de Palabras
+                    ChallengeCard(
+                        title: "Pares de Palabras",
+                        description: "Encuentra el mayor número posible de pares de palabras",
+                        iconName: "text.bubble.fill",
+                        iconColor: .orange,
+                        action: {
+                            showingWordPairsFullScreen = true
+                        }
+                    )
+                    
+                    Spacer()
                 }
-                .frame(height: 120)
                 .padding(.horizontal, 16)
-                
-                Spacer()
             }
         }
         .sheet(isPresented: $showingRetentionSheet, onDismiss: {
@@ -89,6 +70,61 @@ struct ChallengesView: View {
                 RetentionExerciseView(exercise: exercise)
             }
         }
+        .fullScreenCover(isPresented: $showingWordPairsFullScreen) {
+            WordPairsView()
+        }
     }
 }
 
+// Componente reutilizable para las tarjetas de desafío
+struct ChallengeCard: View {
+    let title: String
+    let description: String
+    let iconName: String
+    let iconColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(UIColor.systemBackground))
+                    .shadow(color: .gray.opacity(0.3), radius: 5, x: 0, y: 3)
+                
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(title)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        
+                        Text(description)
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        
+                        Spacer().frame(height: 12)
+                        
+                        Text("INICIAR")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .background(Color.blue)
+                            .cornerRadius(20)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: iconName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 60, height: 60)
+                        .foregroundColor(iconColor)
+                        .padding(.trailing, 8)
+                }
+                .padding(16)
+            }
+            .frame(height: 120)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}

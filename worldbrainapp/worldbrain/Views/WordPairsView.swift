@@ -9,6 +9,8 @@ import SwiftUI
 
 struct WordPairsView: View {
     @Environment(\.presentationMode) var presentationMode
+    @AppStorage("userXP") private var userXP = 0
+    
     @State private var timeRemaining = 120
     @State private var timer: Timer? = nil
     @State private var foundPairs: [(String, String)] = []
@@ -16,26 +18,29 @@ struct WordPairsView: View {
     @State private var words: [String] = []
     @State private var matchedIndices: Set<Int> = []
     @State private var disableCards = false
+    @State private var showExitAlert = false
+    @State private var gameEnded = false
+    @State private var showGameOverAlert = false
+    @State private var earnedXP = 0
+    @State private var rowCount = 5
+    @State private var columnCount = 4
     
-    // Conjuntos de pares de palabras para variedad
+    // Conjuntos de pares de palabras para variedad (10 pares por conjunto = 20 cartas para grid 5x4)
     let wordPairSets: [[(String, String)]] = [
         // Set 1
-        [("perro", "gato"), ("sol", "luna"), ("día", "noche"), ("agua", "fuego"), 
+        [("perro", "gato"), ("sol", "luna"), ("día", "noche"), ("agua", "fuego"),
          ("blanco", "negro"), ("alto", "bajo"), ("frío", "calor"), ("feliz", "triste"),
-         ("amor", "odio"), ("dulce", "salado"), ("abrir", "cerrar"), ("rápido", "lento"),
-         ("grande", "pequeño"), ("rico", "pobre"), ("joven", "viejo")],
+         ("amor", "odio"), ("dulce", "salado")],
          
         // Set 2
         [("cielo", "tierra"), ("mar", "montaña"), ("entrada", "salida"), ("arriba", "abajo"),
          ("comenzar", "terminar"), ("primero", "último"), ("ganar", "perder"), ("nacer", "morir"),
-         ("verdad", "mentira"), ("amigo", "enemigo"), ("lleno", "vacío"), ("duro", "suave"),
-         ("fuerte", "débil"), ("seco", "mojado"), ("nuevo", "viejo")],
+         ("verdad", "mentira"), ("amigo", "enemigo")],
          
         // Set 3
         [("niño", "adulto"), ("hablar", "escuchar"), ("izquierda", "derecha"), ("pasado", "futuro"),
          ("pregunta", "respuesta"), ("fácil", "difícil"), ("guerra", "paz"), ("éxito", "fracaso"),
-         ("llegar", "partir"), ("bonito", "feo"), ("comprar", "vender"), ("recordar", "olvidar"),
-         ("bueno", "malo"), ("ruido", "silencio"), ("permitir", "prohibir")]
+         ("bueno", "malo"), ("ruido", "silencio")]
     ]
     
     var formattedTime: String {
@@ -44,56 +49,105 @@ struct WordPairsView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
     
+    // Cálculo de XP basado en pares encontrados y tiempo restante
+    var calculatedXP: Int {
+        // Base: 10XP por par encontrado
+        let baseXP = foundPairs.count * 10
+        
+        // Bonus por tiempo restante (si completó todos los pares)
+        let timeBonus = matchedIndices.count == words.count ? timeRemaining / 2 : 0
+        
+        return baseXP + timeBonus
+    }
+    
     var body: some View {
         ZStack {
-            Color(UIColor.systemBackground).edgesIgnoringSafeArea(.all)
+            // Fondo
+            LinearGradient(
+                gradient: Gradient(colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.3)]),
+                startPoint: .top,
+                endPoint: .bottom
+            ).edgesIgnoringSafeArea(.all)
             
-            VStack {
-                // Timer and score header
+            VStack(spacing: 16) {
+                // Header con cronómetro y puntuación
                 HStack {
+                    Button(action: {
+                        if !gameEnded {
+                            timer?.invalidate()
+                            showExitAlert = true
+                        } else {
+                            presentationMode.wrappedValue.dismiss()
+                        }
+                    }) {
+                        Text("Cerrar")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 8)
+                            .background(Color.red.opacity(0.8))
+                            .cornerRadius(20)
+                    }
+                    
                     Spacer()
                     
-                    VStack {
+                    VStack(spacing: 8) {
                         Text(formattedTime)
-                            .font(.system(size: 42, weight: .bold))
+                            .font(.system(size: 38, weight: .bold))
+                            .foregroundColor(.white)
                         
                         Text("Pares encontrados: \(foundPairs.count)")
                             .font(.headline)
+                            .foregroundColor(.white)
                     }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(15)
                     
                     Spacer()
                     
-                    Button(action: {
-                        timer?.invalidate()
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Text("Cerrar")
-                            .foregroundColor(.blue)
-                            .padding()
+                    // Vista de XP
+                    VStack {
+                        Text("XP")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        Text("\(calculatedXP)")
+                            .font(.title3.bold())
+                            .foregroundColor(.yellow)
                     }
+                    .padding(.horizontal, 15)
                 }
-                .padding(.top)
+                .padding(.horizontal)
+                .padding(.top, 10)
                 
-                // Word cards grid
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
+                // Grid de cartas
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: columnCount),
+                    spacing: 10
+                ) {
                     ForEach(0..<words.count, id: \.self) { index in
                         WordCardView(
                             word: words[index],
                             isFlipped: selectedCards.contains(index) || matchedIndices.contains(index),
                             isMatched: matchedIndices.contains(index)
                         )
-                        .aspectRatio(1, contentMode: .fit)
+                        .aspectRatio(0.75, contentMode: .fit)
                         .onTapGesture {
                             cardTapped(at: index)
                         }
                         .disabled(disableCards || matchedIndices.contains(index) || selectedCards.contains(index))
                     }
                 }
-                .padding()
+                .padding(.horizontal)
                 
-                Spacer()
+                // Instrucciones breves
+                Text("Encuentra todos los pares de palabras opuestas")
+                    .font(.subheadline)
+                    .foregroundColor(.white)
+                    .padding(.bottom, 5)
             }
-            .padding()
             .onAppear {
                 setupGame()
             }
@@ -101,9 +155,39 @@ struct WordPairsView: View {
                 timer?.invalidate()
             }
         }
+        .alert("¿Estás seguro?", isPresented: $showExitAlert) {
+            Button("Continuar jugando", role: .cancel) {
+                startTimer()
+            }
+            Button("Salir", role: .destructive) {
+                presentationMode.wrappedValue.dismiss()
+            }
+        } message: {
+            Text("Si sales ahora, perderás tu progreso actual.")
+        }
+        .alert(timeRemaining <= 0 ? "¡Tiempo terminado!" : "¡Juego completado!", isPresented: $showGameOverAlert) {
+            Button("Jugar de nuevo") {
+                resetGame()
+            }
+            Button("Salir", role: .cancel) {
+                // Asegurarse de que los cambios de XP persistan antes de salir
+                UserDefaults.standard.synchronize()
+                presentationMode.wrappedValue.dismiss()
+            }
+        } message: {
+            Text("Has encontrado \(foundPairs.count) pares de palabras.\nXP ganado: +\(earnedXP)")
+        }
     }
     
     private func setupGame() {
+        // Reset game state
+        selectedCards = []
+        matchedIndices = []
+        foundPairs = []
+        gameEnded = false
+        earnedXP = 0
+        timeRemaining = 120
+        
         // Select a random set of word pairs
         let selectedSet = wordPairSets.randomElement() ?? wordPairSets[0]
         
@@ -118,6 +202,10 @@ struct WordPairsView: View {
         words.shuffle()
         
         // Start the timer
+        startTimer()
+    }
+    
+    private func startTimer() {
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             if timeRemaining > 0 {
                 timeRemaining -= 1
@@ -127,13 +215,18 @@ struct WordPairsView: View {
         }
     }
     
+    private func resetGame() {
+        timer?.invalidate()
+        setupGame()
+    }
+    
     private func cardTapped(at index: Int) {
         // Add logic to handle card selection and matching
         if selectedCards.count == 0 {
             // First card selection
             selectedCards.append(index)
-        } else if selectedCards.count == 1 {
-            // Second card selection
+        } else if selectedCards.count == 1 && selectedCards[0] != index {
+            // Second card selection (y asegurarse de que no sea la misma carta)
             let firstIndex = selectedCards[0]
             let firstWord = words[firstIndex]
             let secondWord = words[index]
@@ -150,15 +243,16 @@ struct WordPairsView: View {
                     matchedIndices.insert(firstIndex)
                     matchedIndices.insert(index)
                     foundPairs.append((firstWord, secondWord))
+                    
+                    // Check if game is over (all pairs found)
+                    if matchedIndices.count == words.count {
+                        gameEnded = true
+                        endGame(withVictory: true)
+                    }
                 }
                 
                 selectedCards.removeAll()
                 disableCards = false
-                
-                // Check if game is over (all pairs found)
-                if matchedIndices.count == words.count {
-                    endGame()
-                }
             }
         }
     }
@@ -175,9 +269,22 @@ struct WordPairsView: View {
         return false
     }
     
-    private func endGame() {
+    private func endGame(withVictory: Bool = false) {
         timer?.invalidate()
-        // Could show an alert or game over screen here
+        gameEnded = true
+        
+        // Calcula y guarda la XP ganada
+        earnedXP = calculatedXP
+        
+        // Actualizar la XP del usuario y forzar persistencia inmediata
+        DispatchQueue.main.async {
+            userXP += earnedXP
+            UserDefaults.standard.setValue(userXP, forKey: "userXP")
+            UserDefaults.standard.synchronize()
+            
+            // Mostrar alerta después de actualizar XP
+            showGameOverAlert = true
+        }
     }
 }
 
@@ -189,18 +296,28 @@ struct WordCardView: View {
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(cardColor)
-                .shadow(radius: 2)
+                .shadow(radius: 3)
             
             if isFlipped {
                 Text(word)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(5)
                     .multilineTextAlignment(.center)
+            } else {
+                // Diseño del reverso de la carta
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 24))
+                    .foregroundColor(.white.opacity(0.7))
             }
         }
+        .rotation3DEffect(
+            .degrees(isFlipped ? 0 : 180),
+            axis: (x: 0.0, y: 1.0, z: 0.0)
+        )
+        .animation(.easeInOut(duration: 0.3), value: isFlipped)
     }
     
     var cardColor: Color {
@@ -209,7 +326,7 @@ struct WordCardView: View {
         } else if isFlipped {
             return Color.blue
         } else {
-            return Color.indigo
+            return Color(red: 0.2, green: 0.2, blue: 0.8)
         }
     }
 }
