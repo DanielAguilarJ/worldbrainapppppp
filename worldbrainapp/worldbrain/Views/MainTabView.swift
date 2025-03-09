@@ -49,3 +49,4 @@ struct MainTabView: View {
         .environmentObject(xpManager) // Opcional: también lo expone como environmentObject para otras vistas
     }
 }
+

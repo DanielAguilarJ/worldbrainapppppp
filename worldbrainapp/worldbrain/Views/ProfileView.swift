@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @ObservedObject var xpManager: XPManager
+    @StateObject private var achievementManager = AchievementManager()
     @AppStorage("userName") private var userName: String = "Usuario"
     @AppStorage("userEmail") private var userEmail: String = "usuario@ejemplo.com"
     @State private var showEditProfile = false
@@ -83,10 +84,15 @@ struct ProfileView: View {
                     )
                     
                     // Logros
-                    AchievementsView(xp: xpManager.currentXP, completedSessions: completedSessions, streakDays: streakDays)
+                    AchievementsView(
+                        xp: xpManager.currentXP,
+                        completedSessions: completedSessions,
+                        streakDays: streakDays,
+                        achievementManager: achievementManager
+                    )
                     
                     // Historial de actividad
-                    ActivityHistoryView()
+                    ActivityHistoryView(xpManager: xpManager)
                     
                     // Configuración y opciones
                     SettingsCardView(
@@ -138,12 +144,19 @@ struct ProfileView: View {
         .onChange(of: notificationsEnabled) { newValue in
             applyNotifications(newValue)
         }
+        .onAppear {
+            // Verificar y actualizar logros cuando aparece la vista
+            achievementManager.checkAndUpdateAchievements(
+                xp: xpManager.currentXP,
+                completedSessions: completedSessions,
+                streakDays: streakDays
+            )
+        }
     }
     
     // Funciones para aplicar configuraciones
     private func applyDarkMode(_ enabled: Bool) {
         // Utiliza UIApplication para configurar el modo de apariencia
-        // Esto requeriría más código para integrarse completamente
         let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
         let window = windowScene?.windows.first
         window?.overrideUserInterfaceStyle = enabled ? .dark : .light
@@ -386,11 +399,125 @@ struct StatItem: View {
     }
 }
 
-// Sección de logros
+// MARK: - Gestor de logros
+
+class AchievementManager: ObservableObject {
+    @Published var unlockedAchievements: [Achievement] = []
+    
+    // Logros disponibles con sus condiciones
+    var availableAchievements: [Achievement] {
+        [
+            Achievement(
+                id: "first_exercise",
+                title: "Primer ejercicio",
+                description: "Completaste tu primer ejercicio",
+                icon: "star.fill",
+                color: .yellow,
+                isUnlocked: { xp, sessions, streak in sessions >= 1 }
+            ),
+            Achievement(
+                id: "memory_master",
+                title: "Maestro de la memoria",
+                description: "Completa 10 ejercicios de retención",
+                icon: "brain.head.profile",
+                color: .green,
+                isUnlocked: { xp, sessions, streak in sessions >= 10 }
+            ),
+            Achievement(
+                id: "speed_reading",
+                title: "Velocidad lectora",
+                description: "Alcanza 300 puntos de XP",
+                icon: "speedometer",
+                color: .red,
+                isUnlocked: { xp, sessions, streak in xp >= 300 }
+            ),
+            Achievement(
+                id: "weekly_streak",
+                title: "Racha semanal",
+                description: "7 días seguidos de práctica",
+                icon: "calendar.badge.clock",
+                color: .blue,
+                isUnlocked: { xp, sessions, streak in streak >= 7 }
+            )
+        ]
+    }
+    
+    init() {
+        // Cargar logros desbloqueados previamente
+        loadUnlockedAchievements()
+    }
+    
+    func checkAndUpdateAchievements(xp: Int, completedSessions: Int, streakDays: Int) {
+        // Verificar cada logro
+        for achievement in availableAchievements {
+            // Si cumple la condición y no está ya desbloqueado
+            if achievement.isUnlocked(xp, completedSessions, streakDays) &&
+               !isAchievementUnlocked(id: achievement.id) {
+                // Desbloquear logro
+                unlockAchievement(achievement.id)
+                
+                // Añadir actividad para mostrar en la lista reciente
+                ActivityManager.addActivity(
+                    name: "¡Logro desbloqueado: \(achievement.title)!",
+                    xp: 50, // XP de bonificación por logro
+                    icon: achievement.icon
+                )
+            }
+        }
+    }
+    
+    func isAchievementUnlocked(id: String) -> Bool {
+        return unlockedAchievements.contains { $0.id == id }
+    }
+    
+    private func unlockAchievement(_ id: String) {
+        // Buscar el logro en la lista de disponibles
+        if let achievement = availableAchievements.first(where: { $0.id == id }) {
+            // Añadir a los desbloqueados
+            unlockedAchievements.append(achievement)
+            
+            // Guardar estado actualizado
+            saveUnlockedAchievements()
+        }
+    }
+    
+    private func loadUnlockedAchievements() {
+        if let data = UserDefaults.standard.data(forKey: "unlockedAchievements"),
+           let achievementIds = try? JSONDecoder().decode([String].self, from: data) {
+            // Convertir los IDs desbloqueados en objetos Achievement
+            unlockedAchievements = availableAchievements.filter { achievement in
+                achievementIds.contains(achievement.id)
+            }
+        }
+    }
+    
+    private func saveUnlockedAchievements() {
+        // Guardar solo los IDs de los logros desbloqueados
+        let achievementIds = unlockedAchievements.map { $0.id }
+        if let data = try? JSONEncoder().encode(achievementIds) {
+            UserDefaults.standard.set(data, forKey: "unlockedAchievements")
+        }
+    }
+}
+
+// MARK: - Modelo de logro
+
+struct Achievement: Identifiable {
+    let id: String
+    let title: String
+    let description: String
+    let icon: String
+    let color: Color
+    let isUnlocked: (Int, Int, Int) -> Bool // (xp, sessions, streak) -> isUnlocked
+}
+
+// MARK: - Vista de logros
+
 struct AchievementsView: View {
     let xp: Int
     let completedSessions: Int
     let streakDays: Int
+    @ObservedObject var achievementManager: AchievementManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -400,41 +527,18 @@ struct AchievementsView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 15) {
-                    // Primer ejercicio
-                    AchievementItem(
-                        title: "Primer ejercicio",
-                        description: "Completaste tu primer ejercicio",
-                        icon: "star.fill",
-                        color: .yellow,
-                        isUnlocked: completedSessions >= 1
-                    )
-                    
-                    // Maestro de la memoria
-                    AchievementItem(
-                        title: "Maestro de la memoria",
-                        description: "Completa 10 ejercicios de retención",
-                        icon: "brain.head.profile",
-                        color: .green,
-                        isUnlocked: completedSessions >= 10
-                    )
-                    
-                    // Velocidad lectora
-                    AchievementItem(
-                        title: "Velocidad lectora",
-                        description: "Alcanza 300 puntos de XP",
-                        icon: "speedometer",
-                        color: .red,
-                        isUnlocked: xp >= 300
-                    )
-                    
-                    // Racha semanal
-                    AchievementItem(
-                        title: "Racha semanal",
-                        description: "7 días seguidos de práctica",
-                        icon: "calendar.badge.clock",
-                        color: .blue,
-                        isUnlocked: streakDays >= 7
-                    )
+                    ForEach(achievementManager.availableAchievements) { achievement in
+                        let isUnlocked = achievement.isUnlocked(xp, completedSessions, streakDays) ||
+                                        achievementManager.isAchievementUnlocked(id: achievement.id)
+                        
+                        AchievementItem(
+                            title: achievement.title,
+                            description: achievement.description,
+                            icon: achievement.icon,
+                            color: achievement.color,
+                            isUnlocked: isUnlocked
+                        )
+                    }
                 }
                 .padding(.horizontal, 5)
                 .padding(.bottom, 5)
@@ -492,287 +596,8 @@ struct AchievementItem: View {
     }
 }
 
-// Historial de actividad
-struct ActivityHistoryView: View {
-    @AppStorage("recentActivities") private var recentActivitiesData: Data = Data()
-    
-    var recentActivities: [Activity] {
-        guard !recentActivitiesData.isEmpty else {
-            // Si no hay datos, devolver actividades de ejemplo
-            return defaultActivities
-        }
-        
-        do {
-            return try JSONDecoder().decode([Activity].self, from: recentActivitiesData)
-        } catch {
-            print("Error decodificando actividades: \(error)")
-            return defaultActivities
-        }
-    }
-    
-    // Actividades por defecto para cuando no hay datos
-    var defaultActivities: [Activity] {
-        return [
-            Activity(name: "Ejercicio de Retención", date: "Hoy", xp: 35, icon: "brain.head.profile"),
-            Activity(name: "Completa tu primer ejercicio", date: "Pendiente", xp: 0, icon: "flag.fill")
-        ]
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text("Actividad reciente")
-                .font(.headline)
-                .foregroundColor(.white)
-            
-            ForEach(recentActivities.prefix(4)) { activity in
-                HStack {
-                    Image(systemName: activity.icon)
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
-                        .frame(width: 40, height: 40)
-                        .background(Color.blue.opacity(0.5))
-                        .cornerRadius(10)
-                    
-                    VStack(alignment: .leading) {
-                        Text(activity.name)
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                        
-                        Text(activity.date)
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    
-                    Spacer()
-                    
-                    if activity.xp > 0 {
-                        Text("+\(activity.xp) XP")
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.yellow)
-                    } else {
-                        Text("Pendiente")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.gray)
-                    }
-                }
-                .padding(.vertical, 8)
-                
-                if activity.id != recentActivities.prefix(4).last?.id {
-                    Divider()
-                        .background(Color.white.opacity(0.2))
-                }
-            }
-            
-            Button(action: {
-                // Lógica para ver todas las actividades
-            }) {
-                Text("Ver todo")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.blue.opacity(0.5))
-                    .cornerRadius(10)
-            }
-            .padding(.top, 8)
-        }
-        .padding()
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(20)
-    }
-}
+// MARK: - Modelo y gestión de actividades
 
-// Configuración
-struct SettingsCardView: View {
-    @Binding var notificationsEnabled: Bool
-    @Binding var darkModeEnabled: Bool
-    @Binding var soundEffectsEnabled: Bool
-    let onLogout: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text("Configuración")
-                .font(.headline)
-                .foregroundColor(.white)
-            
-            // Notificaciones
-            ToggleSetting(
-                title: "Notificaciones",
-                icon: "bell.fill",
-                isOn: $notificationsEnabled
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.2))
-            
-            // Modo oscuro
-            ToggleSetting(
-                title: "Modo oscuro",
-                icon: "moon.fill",
-                isOn: $darkModeEnabled
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.2))
-            
-            // Efectos de sonido
-            ToggleSetting(
-                title: "Efectos de sonido",
-                icon: "speaker.wave.2.fill",
-                isOn: $soundEffectsEnabled
-            )
-            
-            Divider()
-                .background(Color.white.opacity(0.2))
-            
-            // Cerrar sesión
-            Button(action: onLogout) {
-                HStack {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .foregroundColor(.red)
-                        .font(.system(size: 18))
-                        .frame(width: 25)
-                    
-                    Text("Cerrar sesión")
-                        .foregroundColor(.red)
-                    
-                    Spacer()
-                }
-                .padding(.vertical, 5)
-            }
-        }
-        .padding()
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(20)
-    }
-}
-
-// Toggle para configuración
-struct ToggleSetting: View {
-    let title: String
-    let icon: String
-    @Binding var isOn: Bool
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.white)
-                .font(.system(size: 18))
-                .frame(width: 25)
-            
-            Text(title)
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            Toggle("", isOn: $isOn)
-                .labelsHidden()
-        }
-        .padding(.vertical, 5)
-    }
-}
-
-// Vista de edición de perfil
-struct EditProfileView: View {
-    @Environment(\.presentationMode) var presentationMode
-    @Binding var userName: String
-    @Binding var userEmail: String
-    @Binding var selectedAvatar: Int
-    let avatars: [String]
-    @State private var tempUserName: String = ""
-    @State private var tempUserEmail: String = ""
-    
-    var body: some View {
-        NavigationView {
-            ZStack {
-                // Fondo
-                Color.gray.opacity(0.1).edgesIgnoringSafeArea(.all)
-                
-                VStack(spacing: 20) {
-                    // Selector de avatar
-                    VStack(spacing: 15) {
-                        Text("Escoge un avatar")
-                            .font(.headline)
-                            .padding(.top)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 15) {
-                                ForEach(0..<avatars.count, id: \.self) { index in
-                                    Button(action: {
-                                        selectedAvatar = index
-                                        UserDefaults.standard.set(index, forKey: "selectedAvatar")
-                                    }) {
-                                        Image(systemName: avatars[index])
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(width: 60, height: 60)
-                                            .padding(10)
-                                            .foregroundColor(.white)
-                                            .background(selectedAvatar == index ? Color.blue : Color.gray)
-                                            .clipShape(Circle())
-                                            .overlay(
-                                                Circle()
-                                                    .strokeBorder(selectedAvatar == index ? Color.white : Color.clear, lineWidth: 3)
-                                            )
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                    }
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(15)
-                    .padding(.horizontal)
-                    
-                    // Campos de edición
-                    VStack(spacing: 20) {
-                        TextField("Nombre", text: $tempUserName)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(10)
-                        
-                        TextField("Email", text: $tempUserEmail)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(10)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                    }
-                    .padding(.horizontal)
-                    
-                    Spacer()
-                }
-            }
-            .navigationTitle("Editar Perfil")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancelar") {
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Guardar") {
-                        userName = tempUserName
-                        userEmail = tempUserEmail
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                }
-            }
-            .onAppear {
-                tempUserName = userName
-                tempUserEmail = userEmail
-            }
-        }
-    }
-}
-
-// Modelos de datos
 struct Activity: Identifiable, Codable {
     let id: UUID
     let name: String
@@ -789,8 +614,7 @@ struct Activity: Identifiable, Codable {
     }
 }
 
-// MARK: - Extensión de utilidad para añadir nuevas actividades
-extension ActivityHistoryView {
+struct ActivityManager {
     // Método estático para añadir una nueva actividad desde cualquier parte de la app
     static func addActivity(name: String, xp: Int, icon: String) {
         // Obtener la fecha actual formateada
@@ -867,9 +691,371 @@ extension ActivityHistoryView {
     }
 }
 
-// Vista previa
-struct ProfileView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProfileView(xpManager: XPManager())
+// MARK: - Historial de actividad
+
+struct ActivityHistoryView: View {
+    @ObservedObject var xpManager: XPManager
+    @State private var activities: [Activity] = []
+    @State private var refreshFlag: Bool = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text("Actividad reciente")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            if activities.isEmpty {
+                // Mensaje cuando no hay actividades
+                VStack(spacing: 10) {
+                    Image(systemName: "list.bullet.clipboard")
+                        .font(.system(size: 40))
+                        .foregroundColor(.white.opacity(0.6))
+                    
+                    Text("No hay actividades recientes")
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 20)
+            } else {
+                // Lista de actividades
+                ForEach(activities.prefix(4)) { activity in
+                    HStack {
+                        Image(systemName: activity.icon)
+                            .font(.system(size: 22))
+                            .foregroundColor(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.blue.opacity(0.5))
+                            .cornerRadius(10)
+                        
+                        VStack(alignment: .leading) {
+                            Text(activity.name)
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                            
+                            Text(activity.date)
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                        
+                        Spacer()
+                        
+                        if activity.xp > 0 {
+                            Text("+\(activity.xp) XP")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.yellow)
+                        } else {
+                            Text("Pendiente")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    
+                    if activity.id != activities.prefix(4).last?.id {
+                        Divider()
+                            .background(Color.white.opacity(0.2))
+                    }
+                }
+            }
+            
+            // Botón para crear actividad de prueba
+            HStack(spacing: 15) {
+                Button(action: {
+                    // Registrar actividad de lectura rápida
+                    ActivityManager.addActivity(
+                        name: "Ejercicio de Lectura Rápida",
+                        xp: 25,
+                        icon: "bolt.fill"
+                    )
+                    
+                    // Actualizar la XP del usuario
+                    xpManager.addXP(25)
+                    
+                    // Disparar recargar actividades
+                    loadActivities()
+                    refreshFlag.toggle()
+                }) {
+                    Text("Registrar actividad")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.blue.opacity(0.5))
+                        .cornerRadius(10)
+                }
+                
+                Button(action: {
+                    // Registrar actividad de memoria
+                    ActivityManager.addActivity(
+                        name: "Ejercicio de Memoria",
+                        xp: 35,
+                        icon: "brain.head.profile"
+                    )
+                    
+                    // Actualizar la XP del usuario
+                    xpManager.addXP(35)
+                    
+                    // Disparar recargar actividades
+                    loadActivities()
+                    refreshFlag.toggle()
+                }) {
+                    Text("Otro ejercicio")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.purple.opacity(0.5))
+                        .cornerRadius(10)
+                }
+            }
+            .padding(.top, 8)
+        }
+        .padding()
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(20)
+        .onAppear(perform: loadActivities)
+        .onChange(of: refreshFlag) { _ in
+            loadActivities()
+        }
     }
-}
+    
+    func loadActivities() {
+        if let data = UserDefaults.standard.data(forKey: "recentActivities") {
+            do {
+                activities = try JSONDecoder().decode([Activity].self, from: data)
+            } catch {
+                print("Error decodificando actividades: \(error)")
+                activities = []
+            }
+        } else {
+            // Si no hay datos, crear actividades de ejemplo
+            activities = [
+                Activity(
+                    name: "Bienvenido a WorldBrain",
+                    date: "Hoy",
+                    xp: 50,
+                    icon: "star.fill"
+                ),
+                Activity(
+                        name: "Completa tu primer ejercicio",
+                        date: "Pendiente",
+                        xp: 0,
+                        icon: "flag.fill"
+                    )
+                ]
+            }
+        }
+    }
+
+    // MARK: - Configuración
+
+    struct SettingsCardView: View {
+        @Binding var notificationsEnabled: Bool
+        @Binding var darkModeEnabled: Bool
+        @Binding var soundEffectsEnabled: Bool
+        let onLogout: () -> Void
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 15) {
+                Text("Configuración")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                // Notificaciones
+                ToggleSetting(
+                    title: "Notificaciones",
+                    icon: "bell.fill",
+                    isOn: $notificationsEnabled
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.2))
+                
+                // Modo oscuro
+                ToggleSetting(
+                    title: "Modo oscuro",
+                    icon: "moon.fill",
+                    isOn: $darkModeEnabled
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.2))
+                
+                // Efectos de sonido
+                ToggleSetting(
+                    title: "Efectos de sonido",
+                    icon: "speaker.wave.2.fill",
+                    isOn: $soundEffectsEnabled
+                )
+                
+                Divider()
+                    .background(Color.white.opacity(0.2))
+                
+                // Cerrar sesión
+                Button(action: onLogout) {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .foregroundColor(.red)
+                            .font(.system(size: 18))
+                            .frame(width: 25)
+                        
+                        Text("Cerrar sesión")
+                            .foregroundColor(.red)
+                        
+                        Spacer()
+                    }
+                    .padding(.vertical, 5)
+                }
+            }
+            .padding()
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(20)
+        }
+    }
+
+    // Toggle para configuración
+    struct ToggleSetting: View {
+        let title: String
+        let icon: String
+        @Binding var isOn: Bool
+        
+        var body: some View {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(.white)
+                    .font(.system(size: 18))
+                    .frame(width: 25)
+                
+                Text(title)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Toggle("", isOn: $isOn)
+                    .labelsHidden()
+            }
+            .padding(.vertical, 5)
+        }
+    }
+
+    // Vista de edición de perfil
+    struct EditProfileView: View {
+        @Environment(\.presentationMode) var presentationMode
+        @Binding var userName: String
+        @Binding var userEmail: String
+        @Binding var selectedAvatar: Int
+        let avatars: [String]
+        @State private var tempUserName: String = ""
+        @State private var tempUserEmail: String = ""
+        
+        var body: some View {
+            NavigationView {
+                ZStack {
+                    // Fondo
+                    Color.gray.opacity(0.1).edgesIgnoringSafeArea(.all)
+                    
+                    VStack(spacing: 20) {
+                        // Selector de avatar
+                        VStack(spacing: 15) {
+                            Text("Escoge un avatar")
+                                .font(.headline)
+                                .padding(.top)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 15) {
+                                    ForEach(0..<avatars.count, id: \.self) { index in
+                                        Button(action: {
+                                            selectedAvatar = index
+                                            UserDefaults.standard.set(index, forKey: "selectedAvatar")
+                                        }) {
+                                            Image(systemName: avatars[index])
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fit)
+                                                .frame(width: 60, height: 60)
+                                                .padding(10)
+                                                .foregroundColor(.white)
+                                                .background(selectedAvatar == index ? Color.blue : Color.gray)
+                                                .clipShape(Circle())
+                                                .overlay(
+                                                    Circle()
+                                                        .strokeBorder(selectedAvatar == index ? Color.white : Color.clear, lineWidth: 3)
+                                                )
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(15)
+                        .padding(.horizontal)
+                        
+                        // Campos de edición
+                        VStack(spacing: 20) {
+                            TextField("Nombre", text: $tempUserName)
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(10)
+                            
+                            TextField("Email", text: $tempUserEmail)
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(10)
+                                .keyboardType(.emailAddress)
+                                .autocapitalization(.none)
+                        }
+                        .padding(.horizontal)
+                        
+                        Spacer()
+                    }
+                }
+                .navigationTitle("Editar Perfil")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancelar") {
+                            presentationMode.wrappedValue.dismiss()
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Guardar") {
+                            userName = tempUserName
+                            userEmail = tempUserEmail
+                            presentationMode.wrappedValue.dismiss()
+                        }
+                    }
+                }
+                .onAppear {
+                    tempUserName = userName
+                    tempUserEmail = userEmail
+                }
+            }
+        }
+    }
+
+    // Extension para añadir métodos a Color para que sea codificable
+    extension Color {
+        // Estas funciones ayudan a codificar/decodificar el color
+        func toData() -> Data? {
+            let uiColor = UIColor(self)
+            return try? NSKeyedArchiver.archivedData(withRootObject: uiColor, requiringSecureCoding: false)
+        }
+        
+        static func fromData(_ data: Data) -> Color {
+            let uiColor = try? NSKeyedUnarchiver.unarchivedObject(ofClass: UIColor.self, from: data) ?? UIColor.blue
+            return Color(uiColor!)
+        }
+    }
+
+    // Vista previa
+    struct ProfileView_Previews: PreviewProvider {
+        static var previews: some View {
+            ProfileView(xpManager: XPManager())
+        }
+    }
