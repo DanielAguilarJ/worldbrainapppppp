@@ -1,3 +1,11 @@
+//
+//  CourseSelectorView.swift
+//  worldbrainapp
+//
+//  Created by Daniel on 23/01/2025.
+//
+
+
 import SwiftUI
 
 struct CourseSelectorView: View {

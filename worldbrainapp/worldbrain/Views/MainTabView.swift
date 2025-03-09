@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @State private var selectedTab = 0
+    @State private var isLessonActive = false
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -42,6 +43,8 @@ struct MainTabView: View {
                 }
                 .tag(4)
         }
-        .accentColor(.blue) // Color del ícono activo
+        .accentColor(.blue)
+        .opacity(isLessonActive ? 0 : 1)
     }
 }
+

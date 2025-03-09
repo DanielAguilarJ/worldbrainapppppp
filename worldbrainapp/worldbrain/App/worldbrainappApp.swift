@@ -19,12 +19,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct WorldBrainApp: App {
     // Registramos el AppDelegate de Firebase
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @StateObject private var userProgress = UserProgress()
     
     var body: some Scene {
         WindowGroup {
             // La vista raíz de tu app
             MainTabView()
-            // o ContentView(), etc., como tenías antes
+                .environmentObject(userProgress)
         }
     }
 }

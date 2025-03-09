@@ -1,17 +1,13 @@
-//
-//  LessonStartModal.swift
-//  worldbrainapp
-//
-//  Created by Daniel on 20/01/2025.
-//
-
+import SwiftUI
 
 struct LessonStartModal: View {
     let lesson: Lesson
     let stage: Stage
-    @ObservedObject var stageManager: StageManager
+    let stageManager: StageManager
     let stageIndex: Int
+    @ObservedObject var xpManager: XPManager
     @Binding var isPresented: Bool
+    @State private var showingLesson = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -22,7 +18,7 @@ struct LessonStartModal: View {
                     .bold()
                     .multilineTextAlignment(.center)
                 
-                Text("Lección \(stageManager.getLessonNumber(for: lesson)) de \(stage.lessons.count)")
+                Text("Lección \(getLessonNumber()) de \(stage.lessons.count)")
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }
@@ -35,11 +31,7 @@ struct LessonStartModal: View {
             
             // Botón de inicio
             Button {
-                isPresented = false
-                // Aquí puedes agregar una pequeña demora antes de navegar a la lección
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    // Navegar a la lección
-                }
+                showingLesson = true
             } label: {
                 Text("EMPEZAR MI LECCIÓN")
                     .font(.headline)
@@ -50,10 +42,27 @@ struct LessonStartModal: View {
                     .cornerRadius(12)
             }
             .padding(.horizontal)
+            .fullScreenCover(isPresented: $showingLesson) {
+                LessonView(
+                    lesson: lesson,
+                    stage: stage,
+                    stageManager: stageManager,
+                    xpManager: xpManager,
+                    stageIndex: stageIndex
+                )
+            }
         }
         .padding(.bottom)
         .background(Color(.systemBackground))
         .cornerRadius(20)
         .padding()
     }
+    
+    private func getLessonNumber() -> Int {
+        if let index = stage.lessons.firstIndex(where: { $0.id == lesson.id }) {
+            return index + 1
+        }
+        return 0
+    }
 }
+

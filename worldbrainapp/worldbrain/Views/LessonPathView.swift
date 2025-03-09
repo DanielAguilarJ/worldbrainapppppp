@@ -1,15 +1,24 @@
+//
+//  LessonPathView.swift
+//  worldbrainapp
+//
+//  Created by Daniel on 20/01/2025.
+//
+
 import SwiftUI
 
 struct LessonPathView: View {
     let stage: Stage
     let stageIndex: Int
     @ObservedObject var stageManager: StageManager
+    @ObservedObject var xpManager: XPManager   // Agregamos xpManager aquí
+    
     @State private var selectedLesson: Lesson?
     @State private var showingLessonModal = false
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header: Título, progreso y descripción de la etapa
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("\(stage.completedLessonsCount)/\(stage.requiredLessons)")
@@ -34,19 +43,19 @@ struct LessonPathView: View {
             }
             .padding()
             
-            // Lesson Path
+            // Camino de lecciones (Lesson Path)
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(Array(stage.lessons.enumerated()), id: \.element.id) { index, lesson in
                         VStack(spacing: 0) {
-                            // Línea conectora
+                            // Línea conectora (si no es la primera lección)
                             if index > 0 {
                                 Rectangle()
                                     .fill(Color.gray.opacity(0.3))
                                     .frame(width: 4, height: 40)
                             }
                             
-                            // Círculo de lección
+                            // Círculo de la lección
                             Button {
                                 if !lesson.isLocked {
                                     selectedLesson = lesson
@@ -97,6 +106,7 @@ struct LessonPathView: View {
                 .padding(.vertical)
             }
         }
+        // Popup superpuesto para iniciar la lección
         .sheet(isPresented: $showingLessonModal) {
             if let lesson = selectedLesson {
                 LessonStartModal(
@@ -104,6 +114,7 @@ struct LessonPathView: View {
                     stage: stage,
                     stageManager: stageManager,
                     stageIndex: stageIndex,
+                    xpManager: xpManager,         // Se pasa xpManager aquí
                     isPresented: $showingLessonModal
                 )
             }
@@ -121,3 +132,5 @@ struct LessonPathView: View {
         }
     }
 }
+
+ 

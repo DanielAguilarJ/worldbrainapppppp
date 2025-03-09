@@ -1,11 +1,10 @@
-// MARK: - ContentView.swift
 import SwiftUI
 
 struct ContentView: View {
     @StateObject private var stageManager = StageManager()
     @StateObject private var xpManager = XPManager()
     
-    // Control para abrir/cerrar el selector de curso (opcional)
+    // Control para abrir/cerrar el selector de curso
     @State private var showingCourseSelector = false
     
     var body: some View {
@@ -34,12 +33,15 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                // XP
+                // Mostrar XP y nivel usando XPManager
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
                         .foregroundColor(.orange)
                     Text("\(xpManager.currentXP)")
                         .font(.headline)
+                    Text("(\(xpManager.readerLevel.rawValue))")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
@@ -48,8 +50,7 @@ struct ContentView: View {
             }
             .padding()
             
-            // Mostrar la primer etapa disponible (o la que quieras)
-            // Se asume que stageManager.stages no está vacío
+            // Mostrar la primera etapa disponible (se asume que stageManager.stages no está vacío)
             if let firstUnlockedStage = stageManager.stages.first(where: { !$0.isLocked }) {
                 StageLessonsView(
                     stage: firstUnlockedStage,
@@ -62,7 +63,6 @@ struct ContentView: View {
                     .padding()
             }
         }
-        // Si quieres un .sheet para el selector de curso
         .sheet(isPresented: $showingCourseSelector) {
             CourseSelectorView()
         }

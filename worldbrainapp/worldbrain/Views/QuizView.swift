@@ -1,23 +1,37 @@
 import SwiftUI
-import AVFoundation
 
 struct QuizView: View {
     let questions: [Question]
+    let lesson: Lesson
+    let stage: Stage
+    @ObservedObject var stageManager: StageManager
+    @ObservedObject var xpManager: XPManager
+    let stageIndex: Int
+    
+    let readingSpeed: Double
+    
+    var onQuizComplete: (() -> Void)?
+    
     @State private var currentQuestionIndex = 0
     @State private var selectedAnswer: Int?
     @State private var score = 0
-    let onQuizCompleted: () -> Void
-    @Environment(\.presentationMode) var presentationMode
-    @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        VStack {
-            if currentQuestionIndex < questions.count {
+        if currentQuestionIndex < questions.count {
+            VStack {
+                Text("Pregunta \(currentQuestionIndex + 1) de \(questions.count)")
+                    .font(.headline)
+                    .padding()
+                
+                ProgressView(value: Double(currentQuestionIndex), total: Double(questions.count))
+                    .padding(.horizontal)
+                
                 let question = questions[currentQuestionIndex]
                 
                 Text(question.text)
-                    .font(.headline)
+                    .font(.title3)
                     .padding()
+                    .multilineTextAlignment(.center)
                 
                 ForEach(0..<question.options.count, id: \.self) { index in
                     Button(action: {
@@ -26,7 +40,7 @@ struct QuizView: View {
                         Text(question.options[index])
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(selectedAnswer == index ? Color.blue : Color.gray.opacity(0.2))
+                            .background(selectedAnswer == index ? stage.color : Color.gray.opacity(0.2))
                             .foregroundColor(selectedAnswer == index ? .white : .primary)
                             .cornerRadius(10)
                     }
@@ -44,32 +58,78 @@ struct QuizView: View {
                 }
                 .disabled(selectedAnswer == nil)
                 .padding()
-            } else {
-                VStack {
-                    Text("¡Lección completada!")
-                        .font(.title)
-                    Text("Puntuación: \(score) de \(questions.count)")
-                        .padding()
-                    Button("Cerrar") {
-                        onQuizCompleted()
-                        dismiss()
-                    }
-                    .padding()
+                .foregroundColor(.white)
+                .background(selectedAnswer == nil ? Color.gray : stage.color)
+                .cornerRadius(10)
+                .padding(.top)
+                
+                Spacer()
+            }
+        } else {
+            let minScoreToPass = 2
+            if score < minScoreToPass {
+                LessonFailView(score: score, totalQuestions: questions.count) {
+                    presentationMode.wrappedValue.dismiss()
+                    // Lógica para reintentar o regresar a LessonView
                 }
+            } else {
+                LessonCompletedView(
+                    lesson: lesson,
+                    stage: stage,
+                    score: score,
+                    totalQuestions: questions.count,
+                    stageManager: stageManager,
+                    xpManager: xpManager,
+                    stageIndex: stageIndex,
+                    readingSpeed: readingSpeed
+                ) {
+                    onQuizComplete?()
+                }
+            }
+        }
+    }
+    
+    @Environment(\.presentationMode) var presentationMode
+}
+
+struct LessonFailView: View {
+    let score: Int
+    let totalQuestions: Int
+    var onRetry: () -> Void
+    
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        ZStack {
+            Color(.systemRed).opacity(0.1).ignoresSafeArea()
+            VStack(spacing: 20) {
+                Text("¡Necesitas repasar!")
+                    .font(.largeTitle)
+                    .bold()
+                    .padding(.top, 40)
+                Text("Obtuviste \(score) de \(totalQuestions) respuestas correctas.")
+                    .font(.title3)
+                    .padding()
+                Text("Para avanzar, repite la lectura y vuelve a intentarlo.")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .padding(.horizontal)
+                    .multilineTextAlignment(.center)
+                Spacer()
+                Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                    onRetry()
+                }) {
+                    Text("RELEER LECCIÓN")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.red)
+                        .cornerRadius(12)
+                }
+                .padding(.bottom, 40)
             }
         }
     }
 }
 
-#Preview {
-    QuizView(
-        questions: [
-            Question(
-                text: "Pregunta de ejemplo",
-                options: ["Opción 1", "Opción 2", "Opción 3", "Opción 4"],
-                correctAnswer: 0
-            )
-        ],
-        onQuizCompleted: {}
-    )
-}

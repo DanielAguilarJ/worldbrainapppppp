@@ -1,12 +1,11 @@
-// MARK: - LeaderboardUser.swift
 import Foundation
 
-struct LeaderboardUser: Identifiable {
+struct LeaderboardUser: Identifiable, Equatable {
     let id = UUID()
     var nombre: String
     var xpTotal: Int
     var xpSemanal: Int
     
-    // Opcional: si quieres mostrar una “foto” o avatar
-    // var avatarURL: URL?
+    // Si todas las propiedades son Equatable (UUID, String, Int, etc.)
+    // Swift genera la conformidad por nosotros.
 }

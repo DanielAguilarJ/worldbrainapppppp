@@ -2,65 +2,65 @@
 //  RetentionExerciseView.swift
 //  worldbrainapp
 //
-//  Created by Daniel on 24/01/2025.
-//
-
-
-//
-//  RetentionExerciseView.swift
-//  worldbrainapp
-//
-//  Vista principal del Ejercicio de Retención (lee x seg y contesta un quiz)
-//
-
 import SwiftUI
 
 struct RetentionExerciseView: View {
-    let exercise: RetentionExercise  // Lectura y preguntas
+    let exercise: RetentionExercise
     
-    // ---------- ESTADOS para la CUENTA REGRESIVA
+    // ESTADOS LECTURA
     @State private var showCountdown = false
     @State private var countdownValue = 3
-    
-    // ---------- ESTADOS para MOSTRAR EL PÁRRAFO
     @State private var showParagraph = false
     @State private var timeLeft: Int = 0
     @State private var timer: Timer? = nil
     
-    // ---------- ESTADOS para el QUIZ
+    // ESTADOS QUIZ
     @State private var showingQuiz = false
     @State private var currentQuestionIndex = 0
     @State private var selectedAnswer: Int?
     @State private var score = 0
     
-    // Indica si falló el quiz y tiene que releer
+    // FALLA => relectura
     @State private var showFailView = false
     
-    // Para poder cerrar esta vista con un .dismiss()
-    @Environment(\.presentationMode) var presentationMode
+    // BOTÓN CERRAR
+    @Environment(\.dismiss) private var dismissSheet
     
-    // Ajusta la puntuación mínima para “aprobar”
-    private let minScoreToPass = 2
+    // Para XP local (solo demostración). Si ya tienes XPManager, úsalo en su lugar.
+    @State private var xpActual = UserDefaults.standard.integer(forKey: "userXP")
     
     var body: some View {
         ZStack {
             Color.white.ignoresSafeArea()
             
             if !showingQuiz {
-                // Pantalla de introducción / cuenta atrás / párrafo
                 buildReadingPhase()
             } else {
-                // Pantalla del quiz o resultado
                 buildQuizPhase()
+            }
+            
+            // Botón “Cerrar (X)” arriba a la izquierda
+            VStack {
+                HStack {
+                    Button(action: {
+                        dismissSheet()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title)
+                            .foregroundColor(.gray)
+                            .padding()
+                    }
+                    Spacer()
+                }
+                Spacer()
             }
         }
         .onDisappear {
-            // invalidar timer
             timer?.invalidate()
         }
     }
     
-    // MARK: - PHASE 1: Lógica para la lectura (cuenta atrás + texto)
+    // MARK: - Lectura
     private func buildReadingPhase() -> some View {
         VStack(spacing: 20) {
             Text("Ejercicio de Retención")
@@ -68,13 +68,10 @@ struct RetentionExerciseView: View {
                 .padding(.top, 40)
             
             if !showParagraph && !showCountdown {
-                // Introducción inicial
-                Text("""
-                     Al iniciar, verás el texto por \(exercise.readingTime) segundos.
-                     Después contestarás preguntas de memoria.
-                     """)
-                .multilineTextAlignment(.center)
-                .padding()
+                // Presentación inicial
+                Text("Al iniciar, tendrás \(exercise.readingTime) seg para leer. Luego responde el quiz.")
+                    .multilineTextAlignment(.center)
+                    .padding()
                 
                 Button("Iniciar Ejercicio") {
                     startCountdown()
@@ -86,14 +83,14 @@ struct RetentionExerciseView: View {
                 .cornerRadius(12)
                 
             } else if showCountdown {
-                // Conteo “3,2,1… ¡Fuera!”
+                // Conteo “3,2,1”
                 Text(countdownValue > 0 ? "\(countdownValue)" : "¡Fuera!")
                     .font(.system(size: 80, weight: .bold))
                     .foregroundColor(.white)
                     .background(Color.black.opacity(0.5).ignoresSafeArea())
                 
             } else if showParagraph {
-                // Párrafo + temporizador
+                // Texto
                 Text(exercise.paragraph)
                     .font(.body)
                     .multilineTextAlignment(.leading)
@@ -119,11 +116,11 @@ struct RetentionExerciseView: View {
         }
     }
     
-    // MARK: - PHASE 2: Lógica para el quiz
+    // MARK: - Quiz
     private func buildQuizPhase() -> some View {
         VStack {
+            // No entres al quiz si showFailView==true, a menos que “releer”
             if currentQuestionIndex < exercise.questions.count && !showFailView {
-                // Muestra las preguntas
                 let question = exercise.questions[currentQuestionIndex]
                 
                 Text("Pregunta \(currentQuestionIndex + 1) de \(exercise.questions.count)")
@@ -143,7 +140,9 @@ struct RetentionExerciseView: View {
                         Text(question.options[i])
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(selectedAnswer == i ? Color.blue : Color.gray.opacity(0.2))
+                            .background(
+                                selectedAnswer == i ? Color.blue : Color.gray.opacity(0.2)
+                            )
                             .foregroundColor(selectedAnswer == i ? .white : .black)
                             .cornerRadius(10)
                     }
@@ -151,9 +150,9 @@ struct RetentionExerciseView: View {
                 }
                 
                 Button("Siguiente") {
-                    if let selected = selectedAnswer {
-                        // Verifica respuesta
-                        if selected == question.correctIndex {
+                    if let sel = selectedAnswer {
+                        // Revisar respuesta
+                        if sel == question.correctIndex {
                             score += 1
                         }
                         currentQuestionIndex += 1
@@ -170,45 +169,61 @@ struct RetentionExerciseView: View {
                 Spacer()
             }
             else {
-                // Terminamos las preguntas o estamos en failView
+                // Terminamos las preguntas o showFailView
                 if showFailView {
-                    // Vista de fallo (no pasa)
-                    RetentionFailView(score: score, totalQuestions: exercise.questions.count) {
-                        // Al presionar RELEER, se reinicia todo
+                    // Vista de fallo
+                    RetentionFailView(
+                        score: score,
+                        totalQuestions: exercise.questions.count
+                    ) {
                         resetExercise()
                     }
                 } else {
-                    // Evaluamos si pasó o no
+                    // Check final
                     checkQuizResult()
                 }
             }
         }
     }
     
-    // MARK: - HELPER: Verifica puntaje final
+    // Evaluamos si pasa y sumamos 35 XP
     private func checkQuizResult() -> some View {
-        let totalQuestions = exercise.questions.count
-        if score < minScoreToPass {
-            // No pasó
+        let totalQ = exercise.questions.count
+        
+        // Aprobado si aciertos >= 50%
+        // Ej: 2 preguntas => con 1 acierto(=50%) pasa; 4 preg => 2 aciertos => 50%
+        let passThreshold = Int((Double(totalQ) * 0.5).rounded(.up))
+        
+        if score < passThreshold {
+            // Falló
             return AnyView(
-                RetentionFailView(score: score, totalQuestions: totalQuestions) {
+                RetentionFailView(
+                    score: score,
+                    totalQuestions: totalQ
+                ) {
                     resetExercise()
                 }
             )
         } else {
-            // Pasó: pantalla final
+            // Aprobado => sumamos 35 XP
+            xpActual += 35
+            UserDefaults.standard.set(xpActual, forKey: "userXP")
+            
             return AnyView(
                 VStack(spacing: 20) {
                     Text("¡Ejercicio Completado!")
                         .font(.largeTitle)
                         .padding(.top, 40)
                     
-                    Text("Aciertos: \(score) de \(totalQuestions)")
+                    Text("Aciertos: \(score) de \(totalQ)")
                         .font(.title2)
-                        .padding(.horizontal)
+                    
+                    Text("¡Has ganado 35 XP!")
+                        .font(.headline)
+                        .foregroundColor(.green)
                     
                     Button("Terminar") {
-                        presentationMode.wrappedValue.dismiss()
+                        dismissSheet() // cierra la vista
                     }
                     .font(.headline)
                     .padding()
@@ -222,9 +237,7 @@ struct RetentionExerciseView: View {
         }
     }
     
-    // MARK: - CICLO DE LECTURA
-    
-    /// Inicia la cuenta regresiva “3…2…1”
+    // MARK: - Lógica Lectura
     private func startCountdown() {
         showCountdown = true
         countdownValue = 3
@@ -239,12 +252,11 @@ struct RetentionExerciseView: View {
             showCountdown = false
             showParagraph = true
             timeLeft = exercise.readingTime
-            startTimerForReading()
+            startReadingTimer()
         }
     }
     
-    /// Inicia el timer que decrementa el tiempo de lectura
-    private func startTimerForReading() {
+    private func startReadingTimer() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             if timeLeft > 0 {
@@ -255,7 +267,6 @@ struct RetentionExerciseView: View {
         }
     }
     
-    /// Termina la fase de lectura, pasa al quiz
     private func endReadingPhase() {
         timer?.invalidate()
         timer = nil
@@ -263,31 +274,26 @@ struct RetentionExerciseView: View {
         showingQuiz = true
     }
     
-    // MARK: - REINICIAR EJERCICIO SI FALLA
-    /// Reinicia estados para que el usuario relea el texto y reintente
+    // Reiniciar todo (usuario falló)
     private func resetExercise() {
-        // Regresamos a la fase de lectura
         showParagraph = false
         showCountdown = false
         showingQuiz = false
         showFailView = false
         
-        // Resetea score y preguntas
         score = 0
         currentQuestionIndex = 0
         selectedAnswer = nil
         
-        // Lanza la cuenta atrás de nuevo
         startCountdown()
     }
 }
 
-// MARK: - RetentionFailView (Pantalla de “Fallo”, no aprobó el quiz)
+// MARK: - Vista de “Fallo”
 struct RetentionFailView: View {
     let score: Int
     let totalQuestions: Int
     
-    // Acción para reintentar
     var onRetry: () -> Void
     
     var body: some View {
@@ -304,7 +310,7 @@ struct RetentionFailView: View {
                     .font(.title2)
                     .foregroundColor(.gray)
                 
-                Text("No alcanzaste el mínimo requerido. Relee cuidadosamente antes de contestar.")
+                Text("No alcanzaste el mínimo para aprobar. Vuelve a leer cuidadosamente.")
                     .font(.body)
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
@@ -325,3 +331,4 @@ struct RetentionFailView: View {
         }
     }
 }
+

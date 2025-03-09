@@ -1,18 +1,10 @@
 //
-//  RetentionQuestion.swift
-//  worldbrainapp
-//
-//  Created by Daniel on 24/01/2025.
-//
-
-
-//
 //  RetentionModel.swift
 //  worldbrainapp
 //
 //  Modelos y datos de ejemplo para los ejercicios de retención
 //
-import SwiftUI
+
 import Foundation
 
 /// Representa una pregunta de retención
@@ -25,11 +17,13 @@ struct RetentionQuestion {
 /// Representa un ejercicio de retención (un párrafo + un quiz)
 struct RetentionExercise {
     let paragraph: String
-    let readingTime: Int
     let questions: [RetentionQuestion]
+    let readingTime: Int
 }
 
-/// Arreglo con varias lecturas de ejemplo. Se elige una al azar en ChallengesView.
+/// Arreglo con varias lecturas de ejemplo
+/// NOTA: Asegúrate de que cada exercise tenga >= 1 pregunta
+/// y, si quieres que necesite 2 aciertos, inclúyeles 2+ preguntas.
 let retentionExercises: [RetentionExercise] = [
     RetentionExercise(
         paragraph: """
@@ -37,7 +31,6 @@ let retentionExercises: [RetentionExercise] = [
         Puede batir sus alas a una velocidad de hasta 50 veces por segundo, 
         lo que le permite flotar en el aire e incluso desplazarse hacia atrás.
         """,
-        readingTime: 10,
         questions: [
             RetentionQuestion(
                 text: "¿Cuántas veces por segundo puede batir sus alas un colibrí?",
@@ -45,11 +38,12 @@ let retentionExercises: [RetentionExercise] = [
                 correctIndex: 0
             ),
             RetentionQuestion(
-                text: "¿Qué ave puede volar hacia atrás?",
+                text: "¿Cuál de estas aves puede volar hacia atrás?",
                 options: ["Águila", "Paloma", "Colibrí", "Canario"],
                 correctIndex: 2
             )
-        ]
+        ],
+        readingTime: 10
     ),
     RetentionExercise(
         paragraph: """
@@ -57,7 +51,6 @@ let retentionExercises: [RetentionExercise] = [
         Estas obras de ingeniería permitieron un suministro continuo de agua limpia 
         y contribuyeron a mejorar la higiene y la salud pública.
         """,
-        readingTime: 10,
         questions: [
             RetentionQuestion(
                 text: "¿Para qué usaban los romanos los acueductos?",
@@ -68,8 +61,19 @@ let retentionExercises: [RetentionExercise] = [
                     "Para cultivar trigo en invierno"
                 ],
                 correctIndex: 1
+            ),
+            RetentionQuestion(
+                text: "¿Qué beneficio ofrecían los acueductos?",
+                options: [
+                    "Agua limpia y mejora en la salud pública",
+                    "Reducción de impuestos",
+                    "Transformar vino en agua",
+                    "Proteger contra terremotos"
+                ],
+                correctIndex: 0
             )
-        ]
-    ),
-    // Agrega más RetentionExercise si deseas
+        ],
+        readingTime: 10
+    )
+    // Agrega más RetentionExercise con 2 o más preguntas para un mejor umbral.
 ]

@@ -1,3 +1,11 @@
+//
+//  RedeemCodeView.swift
+//  worldbrainapp
+//
+//  Created by Daniel on 24/01/2025.
+//
+
+
 import SwiftUI
 
 struct RedeemCodeView: View {

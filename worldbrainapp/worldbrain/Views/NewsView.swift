@@ -1,3 +1,11 @@
+//
+//  NewsView.swift
+//  worldbrainapp
+//
+//  Created by Daniel on 21/01/2025.
+//
+
+
 import SwiftUI
 
 struct NewsView: View {
