@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ChallengesView: View {
     @StateObject var xpManager = XPManager()
-    @State private var showingRetentionSheet = false
+    @State private var showingRetentionFullScreen = false // cambié el nombre de la variable
     @State private var showingWordPairsFullScreen = false
     @State private var showingWordInequalityFullScreen = false
     @State private var selectedExercise: RetentionExercise? = nil
@@ -43,7 +43,7 @@ struct ChallengesView: View {
                         action: {
                             if let random = retentionExercises.randomElement() {
                                 selectedExercise = random
-                                showingRetentionSheet = true
+                                showingRetentionFullScreen = true // cambié el nombre de la variable
                             }
                         }
                     )
@@ -75,12 +75,13 @@ struct ChallengesView: View {
                 .padding(.horizontal, 16)
             }
         }
-        .sheet(isPresented: $showingRetentionSheet, onDismiss: {
+        // Cambiado de .sheet a .fullScreenCover para que aparezca en pantalla completa
+        .fullScreenCover(isPresented: $showingRetentionFullScreen, onDismiss: {
             // Volver a nil para que la próxima vez se re-randomice
             selectedExercise = nil
         }) {
             if let exercise = selectedExercise {
-                RetentionExerciseView(exercise: exercise)
+                RetentionExerciseView(exercise: exercise, xpManager: xpManager)
             }
         }
         .fullScreenCover(isPresented: $showingWordPairsFullScreen) {

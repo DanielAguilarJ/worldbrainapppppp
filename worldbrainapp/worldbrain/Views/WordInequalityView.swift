@@ -33,6 +33,8 @@ struct WordInequalityView: View {
     @State private var feedbackMessage = ""
     @State private var feedbackIsPositive = true
     @State private var lastFeedbackTime = Date()
+    @State private var incorrectSelections = 0
+    @State private var showCompletionView = false
     
     // Conjuntos de palabras similares para crear confusión
     let wordSets: [[String]] = [
@@ -74,6 +76,31 @@ struct WordInequalityView: View {
         return max(score * 5, 0) // 5 XP por punto, mínimo 0
     }
     
+    // Cálculo de estrellas basado en selecciones incorrectas
+    var stars: Int {
+        if incorrectSelections == 0 {
+            return 3    // Perfecto - 3 estrellas
+        } else if incorrectSelections <= 2 {
+            return 2    // Hasta 2 errores - 2 estrellas
+        } else {
+            return 1    // Más de 2 errores - 1 estrella
+        }
+    }
+    
+    // Mensaje de rendimiento basado en estrellas
+    var performanceMessage: String {
+        switch stars {
+        case 3:
+            return "¡Perfecto! Identificaste todas las diferencias correctamente."
+        case 2:
+            return "¡Muy bien! Solo tuviste algunos errores."
+        case 1:
+            return "¡Buen intento! Practica para mejorar tu precisión."
+        default:
+            return ""
+        }
+    }
+    
     var body: some View {
         ZStack {
             // Fondo
@@ -83,132 +110,138 @@ struct WordInequalityView: View {
                 endPoint: .bottom
             ).edgesIgnoringSafeArea(.all)
             
-            VStack(spacing: 16) {
-                // Header con cronómetro y puntuación
-                HStack {
-                    Button(action: {
-                        if !gameEnded {
-                            timer?.invalidate()
-                            
-                            // Si el juego no ha terminado, actualizar XP antes de preguntar
-                            if !xpUpdated && score > 0 {
-                                earnedXP = calculatedXP
-                                xpManager.addXP(earnedXP)
-                                xpUpdated = true
+            // Vista principal del juego
+            if !showCompletionView {
+                VStack(spacing: 16) {
+                    // Header con cronómetro y puntuación
+                    HStack {
+                        Button(action: {
+                            if !gameEnded {
+                                timer?.invalidate()
+                                
+                                // Si el juego no ha terminado, actualizar XP antes de preguntar
+                                if !xpUpdated && score > 0 {
+                                    earnedXP = calculatedXP
+                                    xpManager.addXP(earnedXP)
+                                    xpUpdated = true
+                                }
+                                
+                                showExitAlert = true
+                            } else {
+                                presentationMode.wrappedValue.dismiss()
                             }
-                            
-                            showExitAlert = true
-                        } else {
-                            presentationMode.wrappedValue.dismiss()
+                        }) {
+                            Text("Cerrar")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 15)
+                                .padding(.vertical, 8)
+                                .background(Color.red.opacity(0.8))
+                                .cornerRadius(20)
                         }
-                    }) {
-                        Text("Cerrar")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 15)
-                            .padding(.vertical, 8)
-                            .background(Color.red.opacity(0.8))
-                            .cornerRadius(20)
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(spacing: 8) {
-                        Text(formattedTime)
-                            .font(.system(size: 38, weight: .bold))
-                            .foregroundColor(.white)
                         
-                        Text("Puntuación: \(score)")
-                            .font(.headline)
-                            .foregroundColor(.white)
+                        Spacer()
+                        
+                        VStack(spacing: 8) {
+                            Text(formattedTime)
+                                .font(.system(size: 38, weight: .bold))
+                                .foregroundColor(.white)
+                            
+                            Text("Puntuación: \(score)")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.3))
+                        .cornerRadius(15)
+                        
+                        Spacer()
+                        
+                        // Vista de XP
+                        VStack {
+                            Text("XP")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            
+                            Text("\(calculatedXP)")
+                                .font(.title3.bold())
+                                .foregroundColor(.yellow)
+                        }
+                        .padding(.horizontal, 15)
                     }
                     .padding(.horizontal)
-                    .padding(.vertical, 8)
-                    .background(Color.black.opacity(0.3))
-                    .cornerRadius(15)
+                    .padding(.top, 10)
                     
-                    Spacer()
-                    
-                    // Vista de XP
-                    VStack {
-                        Text("XP")
+                    // Instrucciones
+                    VStack(spacing: 5) {
+                        Text("Encuentra pares de palabras DIFERENTES")
                             .font(.headline)
                             .foregroundColor(.white)
                         
-                        Text("\(calculatedXP)")
-                            .font(.title3.bold())
-                            .foregroundColor(.yellow)
+                        Text("Cuidado con los pares idénticos, tienen penalización")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.9))
                     }
-                    .padding(.horizontal, 15)
-                }
-                .padding(.horizontal)
-                .padding(.top, 10)
-                
-                // Instrucciones
-                VStack(spacing: 5) {
-                    Text("Encuentra pares de palabras DIFERENTES")
-                        .font(.headline)
-                        .foregroundColor(.white)
+                    .padding(.vertical, 5)
+                    .padding(.horizontal)
+                    .background(Color.black.opacity(0.2))
+                    .cornerRadius(10)
                     
-                    Text("Cuidado con los pares idénticos, tienen penalización")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
-                }
-                .padding(.vertical, 5)
-                .padding(.horizontal)
-                .background(Color.black.opacity(0.2))
-                .cornerRadius(10)
-                
-                // Grid de pares de palabras
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 15) {
-                    ForEach(0..<pairs.count, id: \.self) { index in
-                        WordPairCardView(
-                            pair: pairs[index],
-                            isSelected: tappedPairs.contains(index)
-                        )
-                        .onTapGesture {
-                            pairTapped(at: index)
+                    // Grid de pares de palabras
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 15) {
+                        ForEach(0..<pairs.count, id: \.self) { index in
+                            WordPairCardView(
+                                pair: pairs[index],
+                                isSelected: tappedPairs.contains(index)
+                            )
+                            .onTapGesture {
+                                pairTapped(at: index)
+                            }
+                            .disabled(tappedPairs.contains(index) || gameEnded)
                         }
-                        .disabled(tappedPairs.contains(index) || gameEnded)
                     }
-                }
-                .padding(.horizontal)
-                
-                Spacer()
-                
-                // Feedback en tiempo real
-                if showFeedback {
-                    Text(feedbackMessage)
-                        .font(.headline)
-                        .foregroundColor(feedbackIsPositive ? .green : .red)
-                        .padding(.vertical, 5)
-                        .padding(.horizontal, 20)
-                        .background(Color.white.opacity(0.3))
-                        .cornerRadius(20)
-                        .transition(.scale.combined(with: .opacity))
-                        .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                withAnimation {
-                                    if Date().timeIntervalSince(lastFeedbackTime) > 1.0 {
-                                        showFeedback = false
+                    .padding(.horizontal)
+                    
+                    Spacer()
+                    
+                    // Feedback en tiempo real
+                    if showFeedback {
+                        Text(feedbackMessage)
+                            .font(.headline)
+                            .foregroundColor(feedbackIsPositive ? .green : .red)
+                            .padding(.vertical, 5)
+                            .padding(.horizontal, 20)
+                            .background(Color.white.opacity(0.3))
+                            .cornerRadius(20)
+                            .transition(.scale.combined(with: .opacity))
+                            .onAppear {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                    withAnimation {
+                                        if Date().timeIntervalSince(lastFeedbackTime) > 1.0 {
+                                            showFeedback = false
+                                        }
                                     }
                                 }
                             }
-                        }
+                    }
                 }
-            }
-            .onAppear {
-                setupGame()
-            }
-            .onDisappear {
-                timer?.invalidate()
-                
-                // Asegurar que XP se actualiza al desaparecer si no se ha hecho antes
-                if !xpUpdated && score > 0 {
-                    earnedXP = calculatedXP
-                    xpManager.addXP(earnedXP)
-                    xpUpdated = true
+                .onAppear {
+                    setupGame()
                 }
+                .onDisappear {
+                    timer?.invalidate()
+                    
+                    // Asegurar que XP se actualiza al desaparecer si no se ha hecho antes
+                    if !xpUpdated && score > 0 {
+                        earnedXP = calculatedXP
+                        xpManager.addXP(earnedXP)
+                        xpUpdated = true
+                    }
+                }
+            } else {
+                // Vista de finalización del juego (similar a LessonCompletedView)
+                CompletionView()
             }
         }
         .alert("¿Estás seguro?", isPresented: $showExitAlert) {
@@ -221,15 +254,128 @@ struct WordInequalityView: View {
         } message: {
             Text("Si sales ahora, conservarás los \(earnedXP) XP que has ganado.")
         }
-        .alert(timeRemaining <= 0 ? "¡Tiempo terminado!" : "¡Juego completado!", isPresented: $showGameOverAlert) {
-            Button("Jugar de nuevo") {
-                resetGame()
+    }
+    
+    @ViewBuilder
+    private func CompletionView() -> some View {
+        ZStack {
+            VStack(spacing: 20) {
+                VStack(spacing: 8) {
+                    Text("¡Ejercicio Completado!")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                    
+                    Text(performanceMessage)
+                        .font(.headline)
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                
+                // Estrellas ganadas
+                HStack(spacing: 15) {
+                    ForEach(1...3, id: \.self) { index in
+                        Image(systemName: index <= stars ? "star.fill" : "star")
+                            .font(.system(size: 45))
+                            .foregroundColor(index <= stars ? .yellow : .gray.opacity(0.5))
+                            .shadow(color: index <= stars ? .orange.opacity(0.7) : .clear, radius: 5)
+                    }
+                }
+                .padding(.vertical, 10)
+                
+                // Resumen de puntuación
+                VStack(spacing: 16) {
+                    // Puntuación
+                    SummaryRow(
+                        title: "Puntuación",
+                        value: "\(score) pts",
+                        iconName: "number.circle.fill",
+                        color: .blue
+                    )
+                    
+                    // Tiempo restante
+                    SummaryRow(
+                        title: "Tiempo restante",
+                        value: formattedTime,
+                        iconName: "timer",
+                        color: .green
+                    )
+                    
+                    // Errores
+                    SummaryRow(
+                        title: "Errores",
+                        value: "\(incorrectSelections)",
+                        iconName: "xmark.circle.fill",
+                        color: .red
+                    )
+                    
+                    // XP ganado
+                    SummaryRow(
+                        title: "XP ganado",
+                        value: "+\(earnedXP)",
+                        iconName: "sparkles",
+                        color: .yellow
+                    )
+                }
+                .padding()
+                .background(Color.white.opacity(0.2))
+                .cornerRadius(15)
+                
+                // Botones de acción
+                HStack(spacing: 20) {
+                    Button(action: {
+                        resetGame()
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Repetir")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 25)
+                        .padding(.vertical, 15)
+                        .background(Color.blue)
+                        .cornerRadius(15)
+                    }
+                    
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        HStack {
+                            Image(systemName: "checkmark.circle")
+                            Text("Finalizar")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 25)
+                        .padding(.vertical, 15)
+                        .background(Color.purple)
+                        .cornerRadius(15)
+                    }
+                }
+                .padding(.top, 10)
             }
-            Button("Salir", role: .cancel) {
-                presentationMode.wrappedValue.dismiss()
-            }
-        } message: {
-            Text("Puntuación final: \(score)\nXP ganado: +\(earnedXP)")
+            .padding(25)
+        }
+    }
+    
+    private func SummaryRow(title: String, value: String, iconName: String, color: Color) -> some View {
+        HStack {
+            Image(systemName: iconName)
+                .font(.system(size: 22))
+                .foregroundColor(color)
+                .frame(width: 35)
+            
+            Text(title)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Text(value)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.white)
         }
     }
     
@@ -242,6 +388,8 @@ struct WordInequalityView: View {
         xpUpdated = false
         timeRemaining = 90
         showFeedback = false
+        incorrectSelections = 0
+        showCompletionView = false
         
         // Crear los 15 pares (formato 3x5)
         pairs = []
@@ -315,6 +463,7 @@ struct WordInequalityView: View {
     
     private func resetGame() {
         timer?.invalidate()
+        showCompletionView = false
         setupGame()
     }
     
@@ -339,6 +488,8 @@ struct WordInequalityView: View {
         } else { // Palabras iguales
             // Restar puntos
             score = max(0, score - 5)
+            // Incrementar contador de selecciones incorrectas
+            incorrectSelections += 1
             
             // Mostrar feedback negativo
             feedbackMessage = "-5 ¡Incorrecto!"
@@ -383,7 +534,10 @@ struct WordInequalityView: View {
             xpUpdated = true
         }
         
-        showGameOverAlert = true
+        // Mostrar vista de finalización en lugar de alerta
+        withAnimation {
+            showCompletionView = true
+        }
     }
 }
 
@@ -425,7 +579,7 @@ struct WordPairCardView: View {
             }
             .frame(height: 50)
         }
-        .shadow(color: isSelected ? (pair.2 ? .red.opacity(0.7) : .green.opacity(0.7)) : .black.opacity(0.3), 
+        .shadow(color: isSelected ? (pair.2 ? .red.opacity(0.7) : .green.opacity(0.7)) : .black.opacity(0.3),
                 radius: isSelected ? 5 : 2)
         .overlay(
             RoundedRectangle(cornerRadius: 10)

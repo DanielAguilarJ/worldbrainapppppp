@@ -3,6 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var isLessonActive = false
+    @StateObject private var xpManager = XPManager()
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -29,7 +30,7 @@ struct MainTabView: View {
                 }
                 .tag(2)
             
-            ProfileView()
+            ProfileView(xpManager: xpManager)
                 .tabItem {
                     Image(systemName: "person.fill")
                     Text("Perfil")
@@ -45,6 +46,6 @@ struct MainTabView: View {
         }
         .accentColor(.blue)
         .opacity(isLessonActive ? 0 : 1)
+        .environmentObject(xpManager) // Opcional: también lo expone como environmentObject para otras vistas
     }
 }
-
