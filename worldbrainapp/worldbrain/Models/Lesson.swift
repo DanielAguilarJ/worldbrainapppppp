@@ -6,7 +6,9 @@ enum LessonType {
     case reading
     case eyeTraining
     case speedReading
+    case peripheralVision // New type for pyramid exercise
 }
+
 struct Lesson: Identifiable {
     let id = UUID()
     let title: String
@@ -18,4 +20,5 @@ struct Lesson: Identifiable {
     var isCompleted: Bool = false
     var isLocked: Bool = true
     let eyeExercises: [EyeExercise]?
+    let pyramidExercise: PyramidTextExercise? // New property for pyramid exercises
 }

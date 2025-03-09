@@ -1,3 +1,11 @@
+//
+//  PyramidTextExercise.swift
+//  worldbrainapp
+//
+//  Created by msc on 09/03/2025.
+//
+
+
 import SwiftUI
 
 struct PyramidTextExercise: Identifiable {

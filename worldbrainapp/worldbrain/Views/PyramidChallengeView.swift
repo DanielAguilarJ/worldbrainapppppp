@@ -202,4 +202,51 @@ struct PyramidChallengeView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(exercise.title)
                             .font(.headline)
-                
+                            .foregroundColor(.primary)
+                        
+                        Text(exercise.description)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                        
+                        // Difficulty indicator
+                        HStack(spacing: 3) {
+                            ForEach(0..<3) { i in
+                                Image(systemName: "circle.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(i < exercise.difficulty ? .green : .gray.opacity(0.3))
+                            }
+                            Text("Dificultad: \(difficultyString(level: exercise.difficulty))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 5)
+                        }
+                        .padding(.top, 5)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.green)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .padding(15)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        
+        private func difficultyString(level: Int) -> String {
+            switch level {
+            case 1: return "Básico"
+            case 2: return "Intermedio"
+            case 3: return "Avanzado"
+            default: return "Personalizado"
+            }
+        }
+    }
+}

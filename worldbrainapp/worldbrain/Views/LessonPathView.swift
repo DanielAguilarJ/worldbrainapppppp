@@ -182,6 +182,8 @@ struct LessonPathView: View {
             return "eye.fill"
         case .speedReading:
             return "gauge.high"
+        case .peripheralVision:
+            return "eye.circle.fill"
         }
     }
 }
@@ -319,6 +321,14 @@ struct LessonNode: View {
                                         color: .purple
                                     )
                                 }
+                                
+                                if lesson.type == .peripheralVision {
+                                    LessonBadge(
+                                        icon: "eye.circle.fill",
+                                        text: "Visión periférica",
+                                        color: .green
+                                    )
+                                }
                             }
                         }
                     }
@@ -359,6 +369,8 @@ struct LessonNode: View {
             return "eye.fill"
         case .speedReading:
             return "gauge.high"
+        case .peripheralVision:
+            return "eye.circle.fill"
         }
     }
 }
