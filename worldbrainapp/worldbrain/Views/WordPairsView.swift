@@ -9,7 +9,7 @@ import SwiftUI
 
 struct WordPairsView: View {
     @Environment(\.presentationMode) var presentationMode
-    @AppStorage("userXP") private var userXP = 0
+    @ObservedObject var xpManager: XPManager
     
     @State private var timeRemaining = 120
     @State private var timer: Timer? = nil
@@ -24,6 +24,7 @@ struct WordPairsView: View {
     @State private var earnedXP = 0
     @State private var rowCount = 5
     @State private var columnCount = 4
+    @State private var xpUpdated = false
     
     // Conjuntos de pares de palabras para variedad (10 pares por conjunto = 20 cartas para grid 5x4)
     let wordPairSets: [[(String, String)]] = [
@@ -75,6 +76,14 @@ struct WordPairsView: View {
                     Button(action: {
                         if !gameEnded {
                             timer?.invalidate()
+                            
+                            // Si el juego no ha terminado, actualizar XP antes de preguntar
+                            if !xpUpdated {
+                                earnedXP = calculatedXP
+                                xpManager.addXP(earnedXP)
+                                xpUpdated = true
+                            }
+                            
                             showExitAlert = true
                         } else {
                             presentationMode.wrappedValue.dismiss()
@@ -153,6 +162,13 @@ struct WordPairsView: View {
             }
             .onDisappear {
                 timer?.invalidate()
+                
+                // Asegurar que XP se actualiza al desaparecer si no se ha hecho antes
+                if !xpUpdated && foundPairs.count > 0 {
+                    earnedXP = calculatedXP
+                    xpManager.addXP(earnedXP)
+                    xpUpdated = true
+                }
             }
         }
         .alert("¿Estás seguro?", isPresented: $showExitAlert) {
@@ -160,18 +176,17 @@ struct WordPairsView: View {
                 startTimer()
             }
             Button("Salir", role: .destructive) {
+                // No necesitamos añadir XP aquí porque ya se hizo antes de mostrar la alerta
                 presentationMode.wrappedValue.dismiss()
             }
         } message: {
-            Text("Si sales ahora, perderás tu progreso actual.")
+            Text("Si sales ahora, conservarás los \(earnedXP) XP que has ganado.")
         }
         .alert(timeRemaining <= 0 ? "¡Tiempo terminado!" : "¡Juego completado!", isPresented: $showGameOverAlert) {
             Button("Jugar de nuevo") {
                 resetGame()
             }
             Button("Salir", role: .cancel) {
-                // Asegurarse de que los cambios de XP persistan antes de salir
-                UserDefaults.standard.synchronize()
                 presentationMode.wrappedValue.dismiss()
             }
         } message: {
@@ -186,6 +201,7 @@ struct WordPairsView: View {
         foundPairs = []
         gameEnded = false
         earnedXP = 0
+        xpUpdated = false
         timeRemaining = 120
         
         // Select a random set of word pairs
@@ -226,7 +242,7 @@ struct WordPairsView: View {
             // First card selection
             selectedCards.append(index)
         } else if selectedCards.count == 1 && selectedCards[0] != index {
-            // Second card selection (y asegurarse de que no sea la misma carta)
+            // Second card selection (asegurarse de que no sea la misma carta)
             let firstIndex = selectedCards[0]
             let firstWord = words[firstIndex]
             let secondWord = words[index]
@@ -276,15 +292,13 @@ struct WordPairsView: View {
         // Calcula y guarda la XP ganada
         earnedXP = calculatedXP
         
-        // Actualizar la XP del usuario y forzar persistencia inmediata
-        DispatchQueue.main.async {
-            userXP += earnedXP
-            UserDefaults.standard.setValue(userXP, forKey: "userXP")
-            UserDefaults.standard.synchronize()
-            
-            // Mostrar alerta después de actualizar XP
-            showGameOverAlert = true
+        // Actualizar la XP usando el XPManager
+        if !xpUpdated {
+            xpManager.addXP(earnedXP)
+            xpUpdated = true
         }
+        
+        showGameOverAlert = true
     }
 }
 

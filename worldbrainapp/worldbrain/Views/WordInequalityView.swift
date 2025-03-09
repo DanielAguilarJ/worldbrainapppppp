@@ -2,6 +2,14 @@
 //  WordInequalityView.swift
 //  worldbrainapp
 //
+//  Created by msc on 09/03/2025.
+//
+
+
+//
+//  WordInequalityView.swift
+//  worldbrainapp
+//
 //  Vista para el desafío de pares de palabras desiguales
 //
 

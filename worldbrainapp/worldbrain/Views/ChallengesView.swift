@@ -8,8 +8,10 @@
 import SwiftUI
 
 struct ChallengesView: View {
+    @StateObject var xpManager = XPManager()
     @State private var showingRetentionSheet = false
     @State private var showingWordPairsFullScreen = false
+    @State private var showingWordInequalityFullScreen = false
     @State private var selectedExercise: RetentionExercise? = nil
     
     var body: some View {
@@ -46,7 +48,7 @@ struct ChallengesView: View {
                         }
                     )
                     
-                    // Card con Pares de Palabras
+                    // Card con Pares de Palabras Iguales
                     ChallengeCard(
                         title: "Pares de Palabras",
                         description: "Encuentra el mayor número posible de pares de palabras",
@@ -54,6 +56,17 @@ struct ChallengesView: View {
                         iconColor: .orange,
                         action: {
                             showingWordPairsFullScreen = true
+                        }
+                    )
+                    
+                    // Card con Palabras Desiguales
+                    ChallengeCard(
+                        title: "Palabras Desiguales",
+                        description: "Encuentra pares de palabras diferentes y evita los idénticos",
+                        iconName: "character.textbox",
+                        iconColor: .purple,
+                        action: {
+                            showingWordInequalityFullScreen = true
                         }
                     )
                     
@@ -71,7 +84,10 @@ struct ChallengesView: View {
             }
         }
         .fullScreenCover(isPresented: $showingWordPairsFullScreen) {
-            WordPairsView()
+            WordPairsView(xpManager: xpManager)
+        }
+        .fullScreenCover(isPresented: $showingWordInequalityFullScreen) {
+            WordInequalityView(xpManager: xpManager)
         }
     }
 }
