@@ -1,3 +1,11 @@
+//
+//  StageType.swift
+//  worldbrainapp
+//
+//  Created by msc on 10/03/2025.
+//
+
+
 import Foundation
 
 // Modelo para las etapas del programa
