@@ -191,6 +191,8 @@ struct LessonStartModal: View {
             return "eye.fill"
         case .speedReading:
             return "gauge.high"
+        case .peripheralVision:
+            return "eye.circle.fill"
         }
     }
 }
