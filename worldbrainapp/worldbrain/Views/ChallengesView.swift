@@ -9,9 +9,10 @@ import SwiftUI
 
 struct ChallengesView: View {
     @StateObject var xpManager = XPManager()
-    @State private var showingRetentionFullScreen = false // cambié el nombre de la variable
+    @State private var showingRetentionFullScreen = false
     @State private var showingWordPairsFullScreen = false
     @State private var showingWordInequalityFullScreen = false
+    @State private var showingPyramidChallengeFullScreen = false // Nuevo estado para visión periférica
     @State private var selectedExercise: RetentionExercise? = nil
     
     var body: some View {
@@ -43,7 +44,7 @@ struct ChallengesView: View {
                         action: {
                             if let random = retentionExercises.randomElement() {
                                 selectedExercise = random
-                                showingRetentionFullScreen = true // cambié el nombre de la variable
+                                showingRetentionFullScreen = true
                             }
                         }
                     )
@@ -70,6 +71,17 @@ struct ChallengesView: View {
                         }
                     )
                     
+                    // NUEVA Card - Visión Periférica con Textos en Pirámide
+                    ChallengeCard(
+                        title: "Visión Periférica",
+                        description: "Mejora tu campo visual con textos en forma de pirámide",
+                        iconName: "eye.circle.fill",
+                        iconColor: .green,
+                        action: {
+                            showingPyramidChallengeFullScreen = true
+                        }
+                    )
+                    
                     Spacer()
                 }
                 .padding(.horizontal, 16)
@@ -89,6 +101,10 @@ struct ChallengesView: View {
         }
         .fullScreenCover(isPresented: $showingWordInequalityFullScreen) {
             WordInequalityView(xpManager: xpManager)
+        }
+        // NUEVO - FullScreenCover para los ejercicios de visión periférica
+        .fullScreenCover(isPresented: $showingPyramidChallengeFullScreen) {
+            PyramidChallengeView(xpManager: xpManager)
         }
     }
 }
