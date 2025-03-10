@@ -85,6 +85,6 @@ struct BlueStageView: View {
 struct BlueStageView_Previews: PreviewProvider {
     static var previews: some View {
         BlueStageView()
-            .environmentObject(ProgressManager())
+            .environmentObject(progressManager)
     }
 }

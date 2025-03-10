@@ -5,7 +5,6 @@
 //  Created by msc on 10/03/2025.
 //
 
-
 import SwiftUI
 
 struct ChallengesListView: View {
@@ -38,10 +37,12 @@ struct ChallengesListView: View {
                         systemImage: "info.circle"
                     )
                     .padding()
+                    .accessibilityLabel("Información sobre desafíos")
                 }
                 .padding(.vertical)
             }
         }
+        .accessibilityLabel("Lista de desafíos para la etapa \(stage.rawValue)")
     }
 }
 
@@ -49,11 +50,13 @@ struct ChallengeCardView: View {
     let challenge: Challenge
     @State private var isExpanded = false
     @State private var showingChallenge = false
+    @State private var hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
     
     var body: some View {
         VStack {
             Button(action: {
-                withAnimation {
+                hapticFeedback.impactOccurred()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isExpanded.toggle()
                 }
             }) {
@@ -79,18 +82,22 @@ struct ChallengeCardView: View {
                         if challenge.isCompleted {
                             Image(systemName: "checkmark")
                                 .foregroundColor(.white)
+                                .accessibility(label: Text("Desafío completado"))
                         } else {
                             Image(systemName: "trophy")
                                 .foregroundColor(.blue)
+                                .accessibility(label: Text("Desafío por completar"))
                         }
                     }
                     
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .foregroundColor(.blue)
                         .padding(.leading, 8)
+                        .accessibilityHidden(true)
                 }
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibility(label: Text("\(challenge.title), \(challenge.type.rawValue), \(challenge.isCompleted ? "completado" : "pendiente")"))
             
             if isExpanded {
                 VStack(alignment: .leading, spacing: 15) {
@@ -99,6 +106,7 @@ struct ChallengeCardView: View {
                         .padding(.vertical, 5)
                     
                     Button(action: {
+                        hapticFeedback.impactOccurred()
                         showingChallenge = true
                     }) {
                         Text("Iniciar Desafío")
@@ -109,9 +117,10 @@ struct ChallengeCardView: View {
                             .background(Color.blue)
                             .cornerRadius(8)
                     }
+                    .accessibilityHint("Toca para comenzar el desafío")
                 }
                 .padding(.top)
-                .transition(.move(edge: .top))
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .padding()
@@ -143,6 +152,7 @@ struct InfoCardView: View {
                     Circle()
                         .fill(Color.blue.opacity(0.1))
                 )
+                .accessibilityHidden(true)
             
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
@@ -175,6 +185,7 @@ struct ChallengeDetailView: View {
     @State private var timeRemaining = 60 // En segundos
     @State private var timer: Timer?
     @State private var startTime: Date?
+    @State private var hapticFeedback = UINotificationFeedbackGenerator()
     
     var body: some View {
         NavigationView {
@@ -222,6 +233,7 @@ struct ChallengeDetailView: View {
                         onComplete: { result in
                             score = result
                             challengeCompleted = true
+                            hapticFeedback.notificationOccurred(.success)
                         }
                     )
                 } else if challenge.type == .speedReading {
@@ -229,6 +241,7 @@ struct ChallengeDetailView: View {
                         onComplete: { result in
                             score = result
                             challengeCompleted = true
+                            hapticFeedback.notificationOccurred(.success)
                         }
                     )
                 } else {
@@ -236,6 +249,7 @@ struct ChallengeDetailView: View {
                         onComplete: { result in
                             score = result
                             challengeCompleted = true
+                            hapticFeedback.notificationOccurred(.success)
                         }
                     )
                 }
@@ -249,6 +263,7 @@ struct ChallengeDetailView: View {
                             .resizable()
                             .frame(width: 50, height: 50)
                             .foregroundColor(.yellow)
+                            .accessibilityHidden(true)
                         
                         Text("¡Desafío completado!")
                             .font(.title2)
@@ -270,6 +285,7 @@ struct ChallengeDetailView: View {
                                 .background(Color.green)
                                 .cornerRadius(10)
                         }
+                        .accessibility(hint: Text("Guarda los resultados y regresa a la lista de desafíos"))
                     }
                     .padding()
                     .background(
@@ -285,14 +301,17 @@ struct ChallengeDetailView: View {
                 }) {
                     Image(systemName: "xmark")
                         .foregroundColor(.blue)
+                        .accessibility(label: Text("Cerrar"))
                 }
             )
+            .navigationBarTitle("", displayMode: .inline)
         }
         .onAppear {
             startTime = Date()
         }
         .onDisappear {
             timer?.invalidate()
+            timer = nil
         }
     }
 }
@@ -304,6 +323,7 @@ struct PeripheralVisionChallengeView: View {
     @State private var correctAnswers = 0
     @State private var showingWord = false
     @State private var isCompleting = false
+    @State private var timer: Timer?
     
     let words = ["rápido", "lectura", "cerebro", "comprender", "velocidad", "visión", "periférica", "concentración", "enfoque", "progreso"]
     
@@ -323,6 +343,7 @@ struct PeripheralVisionChallengeView: View {
                         Text(words[currentIndex])
                             .font(.title)
                             .transition(.opacity)
+                            .accessibilityHidden(true) // Ocultamos para lectores de pantalla
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: 200)
@@ -336,6 +357,7 @@ struct PeripheralVisionChallengeView: View {
                         .background(Color.blue)
                         .cornerRadius(10)
                 }
+                .accessibilityHint("Comenzará a mostrar palabras rápidamente. Mantén la mirada en el punto central")
             } else {
                 // Preguntas de verificación
                 Text("¿Cuál fue la última palabra que viste?")
@@ -359,11 +381,15 @@ struct PeripheralVisionChallengeView: View {
                 }
             }
         }
+        .onDisappear {
+            timer?.invalidate()
+            timer = nil
+        }
     }
     
     private func startChallenge() {
         var iterations = 0
-        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { timer in
+        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { timer in
             withAnimation {
                 showingWord = true
             }
@@ -464,6 +490,7 @@ struct SpeedReadingChallengeView: View {
                             .multilineTextAlignment(.leading)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .accessibilityHint(index == 1 ? "Esta es la respuesta correcta" : "Esta no es la respuesta correcta")
                     }
                 }
             }
@@ -509,16 +536,16 @@ struct ComprehensionChallengeView: View {
         """
     
     let questions = [
-        (question: "¿Cuántos factores clave se mencionan en el texto?", 
-         options: ["Dos", "Tres", "Cuatro"], 
+        (question: "¿Cuántos factores clave se mencionan en el texto?",
+         options: ["Dos", "Tres", "Cuatro"],
          correctAnswer: 1),
         
-        (question: "¿Qué significa 'regresión' según el texto?", 
-         options: ["Avanzar rápidamente en el texto", "Volver a leer palabras", "Procesar palabras individualmente"], 
+        (question: "¿Qué significa 'regresión' según el texto?",
+         options: ["Avanzar rápidamente en el texto", "Volver a leer palabras", "Procesar palabras individualmente"],
          correctAnswer: 1),
          
-        (question: "¿Cuánto tiempo diario de práctica recomiendan los expertos?", 
-         options: ["10 minutos", "15 minutos", "30 minutos"], 
+        (question: "¿Cuánto tiempo diario de práctica recomiendan los expertos?",
+         options: ["10 minutos", "15 minutos", "30 minutos"],
          correctAnswer: 1)
     ]
     
@@ -599,6 +626,7 @@ struct ComprehensionChallengeView: View {
                                         )
                                     }
                                     .buttonStyle(PlainButtonStyle())
+                                    .accessibilityHint("Opción \(optionIndex + 1) de 3")
                                 }
                             }
                             
@@ -619,6 +647,7 @@ struct ComprehensionChallengeView: View {
                         }
                         .disabled(!allQuestionsAnswered)
                         .padding(.top)
+                        .accessibility(hint: Text("Disponible cuando respondas todas las preguntas"))
                     }
                 }
             }
@@ -642,6 +671,6 @@ struct ComprehensionChallengeView: View {
 struct ChallengesListView_Previews: PreviewProvider {
     static var previews: some View {
         ChallengesListView(stage: .blue)
-            .environmentObject(ProgressManager())
+            .environmentObject(progressManager)
     }
 }
