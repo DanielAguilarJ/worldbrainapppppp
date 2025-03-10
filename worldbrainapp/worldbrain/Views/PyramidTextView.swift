@@ -5,7 +5,6 @@
 //  Created by msc on 09/03/2025.
 //
 
-
 import SwiftUI
 
 struct PyramidTextView: View {
@@ -25,6 +24,7 @@ struct PyramidTextView: View {
     @State private var paragraphOpacity = 1.0
     @State private var focusPointScale = 1.0
     @State private var pulseAnimation = false
+    @State private var showExitConfirmation = false
     
     var body: some View {
         ZStack {
@@ -44,8 +44,22 @@ struct PyramidTextView: View {
                 exerciseView
             }
         }
+        .onAppear {
+            print("PyramidTextView apareció con ejercicio: \(exercise.title)")
+        }
         .onDisappear {
             timer?.invalidate()
+        }
+        .alert(isPresented: $showExitConfirmation) {
+            Alert(
+                title: Text("¿Quieres salir?"),
+                message: Text("Si sales ahora perderás tu progreso en este ejercicio."),
+                primaryButton: .destructive(Text("Salir")) {
+                    timer?.invalidate()
+                    presentationMode.wrappedValue.dismiss()
+                },
+                secondaryButton: .cancel(Text("Continuar"))
+            )
         }
     }
     
@@ -154,8 +168,8 @@ struct PyramidTextView: View {
                     .background(
                         Capsule()
                             .fill(
-                                timeRemaining < 10 
-                                ? Color.red.opacity(0.15) 
+                                timeRemaining < 10
+                                ? Color.red.opacity(0.15)
                                 : Color.green.opacity(0.15)
                             )
                     )
@@ -380,9 +394,7 @@ struct PyramidTextView: View {
     }
     
     private func showExitAlert() {
-        // In a real implementation, add an alert here asking if they want to exit
-        timer?.invalidate()
-        presentationMode.wrappedValue.dismiss()
+        showExitConfirmation = true
     }
 }
 

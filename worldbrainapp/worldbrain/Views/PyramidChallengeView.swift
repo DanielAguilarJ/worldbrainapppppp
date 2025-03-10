@@ -123,6 +123,7 @@ struct PyramidChallengeView: View {
                                 exercise: exercise,
                                 index: index + 1,
                                 onSelect: {
+                                    print("Seleccionando ejercicio: \(exercise.title)")
                                     selectedExercise = exercise
                                     showingExercise = true
                                 }
@@ -140,6 +141,15 @@ struct PyramidChallengeView: View {
         .fullScreenCover(isPresented: $showingExercise) {
             if let exercise = selectedExercise {
                 PyramidTextView(exercise: exercise, xpManager: xpManager)
+            } else {
+                // Fallback por si el ejercicio es nil (no debería ocurrir)
+                Text("Error: No se pudo cargar el ejercicio")
+                    .onAppear {
+                        print("Error: selectedExercise es nil")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                            showingExercise = false
+                        }
+                    }
             }
         }
         .onAppear {
@@ -178,7 +188,10 @@ struct PyramidChallengeView: View {
         let onSelect: () -> Void
         
         var body: some View {
-            Button(action: onSelect) {
+            Button(action: {
+                // Llamada directa a la función onSelect
+                onSelect()
+            }) {
                 HStack(spacing: 15) {
                     // Circular icon with exercise number
                     ZStack {
@@ -238,6 +251,9 @@ struct PyramidChallengeView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            // Efecto visual al presionar
+            .scaleEffect(0.98)
+            .animation(.spring(), value: 0.98)
         }
         
         private func difficultyString(level: Int) -> String {
