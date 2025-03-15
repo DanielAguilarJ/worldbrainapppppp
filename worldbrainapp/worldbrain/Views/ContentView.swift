@@ -1,13 +1,12 @@
 import SwiftUI
-
+import AVFoundation
 struct ContentView: View {
     @StateObject private var stageManager = StageManager()
     @StateObject private var xpManager = XPManager()
+    
     // Control para abrir/cerrar el selector de curso
     @State private var showingCourseSelector = false
     @State private var animateHeader = false
-    @StateObject private var progressManager = ProgressManager(stageManager: stageManager, xpManager: xpManager)
-
     
     var body: some View {
         VStack(spacing: 0) {

@@ -1,12 +1,4 @@
 //
-//  StageType 2.swift
-//  worldbrainapp
-//
-//  Created by msc on 10/03/2025.
-//
-
-
-//
 //  ProgressManager.swift
 //  worldbrainapp
 //
@@ -38,12 +30,12 @@ class ProgressManager: ObservableObject {
     @Published var blueStageProgress: Double = 0.0
     
     // Referencias a los sistemas de gestión existentes
-    private let stageManager: StageManager
-    private let xpManager: XPManager
+    private var stageManager: StageManager
+    private var xpManager: XPManager
     private let userProgress: UserProgress
     
     // Modelo de lección compatible con BlueStageView y ChallengesListView
-    @Published var blueStageLessons: [Lesson] = []
+    @Published var blueStageLessons: [BlueStageLesson] = []
     @Published var blueStageChallenges: [Challenge] = []
     
     init(stageManager: StageManager, xpManager: XPManager) {
@@ -58,6 +50,16 @@ class ProgressManager: ObservableObject {
         calculateBlueStageProgress()
     }
     
+    // Método para actualizar las referencias a los managers
+    func connectManagers(stageManager: StageManager, xpManager: XPManager) {
+        self.stageManager = stageManager
+        self.xpManager = xpManager
+        
+        // Volver a inicializar componentes que dependen de estos managers
+        setupBlueStageChallenges()
+        calculateBlueStageProgress()
+    }
+    
     // Convierte las lecciones del StageManager al formato necesario para BlueStageView
     private func convertLessonsForBlueStage() {
         // Encuentra la etapa azul en el sistema existente (asumiendo que es la segunda etapa)
@@ -66,15 +68,15 @@ class ProgressManager: ObservableObject {
             
             // Convierte las lecciones existentes al nuevo formato
             blueStageLessons = blueStage.lessons.map { lesson in
-                return Lesson(
+                return BlueStageLesson(
                     id: lesson.id,
                     title: lesson.title,
                     description: lesson.description,
                     content: lesson.content,
                     targetWPM: 130, // Objetivo para la etapa azul
                     isCompleted: lesson.isCompleted,
-                    userComprehensionScore: nil,
-                    userWPM: nil
+                    userComprehensionScore: nil as Double?,
+                    userWPM: nil as Int?
                 )
             }
         }
@@ -136,7 +138,7 @@ class ProgressManager: ObservableObject {
     }
     
     // Obtiene las lecciones para una etapa específica
-    func getLessons(for stage: StageType) -> [Lesson] {
+    func getLessons(for stage: StageType) -> [BlueStageLesson] {
         // Si es la etapa azul, actualizamos primero y luego devolvemos
         if stage == .blue {
             convertLessonsForBlueStage()
@@ -154,7 +156,7 @@ class ProgressManager: ObservableObject {
     }
     
     // Completa una lección y actualiza el progreso
-    func completeLesson(_ lesson: Lesson, withWPM wpm: Int, comprehension: Double) {
+    func completeLesson(_ lesson: BlueStageLesson, withWPM wpm: Int, comprehension: Double) {
         // Busca la lección equivalente en el sistema existente y márcala como completada
         if let stageIndex = stageManager.stages.firstIndex(where: { $0.name == "Etapa Azul" }) {
             if let lessonIndex = stageManager.stages[stageIndex].lessons.firstIndex(where: { $0.id == lesson.id }) {
@@ -207,7 +209,7 @@ class ProgressManager: ObservableObject {
 // MARK: - Modelos de datos para la etapa azul
 
 // Modelo de lección adaptado para BlueStageView
-struct Lesson: Identifiable {
+struct BlueStageLesson: Identifiable {
     let id: UUID
     let title: String
     let description: String
