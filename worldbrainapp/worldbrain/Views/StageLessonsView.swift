@@ -14,7 +14,7 @@ struct StageLessonsView: View {
     @ObservedObject var xpManager: XPManager
     
     // Para mostrar/ocultar el popup
-    @State private var selectedLesson: Lesson?
+    @State private var selectedLesson: LessonFromModelsFile?
     @State private var showingLessonPopup = false
     
     // Control para la LessonView a full screen
@@ -36,134 +36,20 @@ struct StageLessonsView: View {
             ScrollView {
                 VStack(spacing: 5) {
                     // Encabezado de la Etapa con animación
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(stage.name)
-                                    .font(.system(.title, design: .rounded))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(stage.color)
-                                
-                                Text(stage.description)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            .opacity(appearElements ? 1 : 0)
-                            .offset(x: appearElements ? 0 : -20)
-                            .animation(.easeOut(duration: 0.5), value: appearElements)
-                            
-                            Spacer()
-                            
-                            // Progreso circular animado
-                            ZStack {
-                                Circle()
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 8)
-                                    .frame(width: 70, height: 70)
-                                
-                                Circle()
-                                    .trim(from: 0.0, to: appearElements ? CGFloat(stage.completedLessonsCount) / CGFloat(stage.requiredLessons) : 0.0)
-                                    .stroke(stage.color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                                    .frame(width: 70, height: 70)
-                                    .rotationEffect(.degrees(-90))
-                                    .animation(.easeInOut(duration: 1.2).delay(0.5), value: appearElements)
-                                
-                                Text("\(stage.completedLessonsCount)/\(stage.requiredLessons)")
-                                    .font(.system(.headline, design: .rounded))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(stage.color)
-                            }
-                            .opacity(appearElements ? 1 : 0)
-                            .scaleEffect(appearElements ? 1 : 0.7)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.3), value: appearElements)
-                        }
-                        
-                        // Barra de progreso horizontal
-                        ProgressBar(value: CGFloat(stage.completedLessonsCount), total: CGFloat(stage.requiredLessons), color: stage.color)
-                            .frame(height: 8)
-                            .clipShape(Capsule())
-                            .opacity(appearElements ? 1 : 0)
-                            .animation(.easeOut(duration: 0.6).delay(0.4), value: appearElements)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 15)
+                    stageHeaderView()
                     
                     // Camino de Lecciones
-                    VStack(spacing: 0) {
-                        ForEach(Array(stage.lessons.enumerated()), id: \.element.id) { index, lesson in
-                            VStack(spacing: 0) {
-                                // Línea conectora
-                                if index > 0 {
-                                    if lesson.isLocked {
-                                        DashedConnector(color: Color.gray.opacity(0.5))
-                                            .frame(width: 4, height: 40)
-                                            .opacity(appearElements ? 1 : 0)
-                                            .animation(.easeOut(duration: 0.4).delay(0.3 + 0.05 * Double(index)), value: appearElements)
-                                    } else {
-                                        Rectangle()
-                                            .fill(
-                                                LinearGradient(
-                                                    gradient: Gradient(colors: [stage.color.opacity(0.7), stage.color]),
-                                                    startPoint: .top,
-                                                    endPoint: .bottom
-                                                )
-                                            )
-                                            .frame(width: 4, height: 40)
-                                            .opacity(appearElements ? 1 : 0)
-                                            .animation(.easeOut(duration: 0.4).delay(0.3 + 0.05 * Double(index)), value: appearElements)
-                                    }
-                                }
-                                
-                                // Nodo de la lección
-                                LessonCircleNode(
-                                    lesson: lesson,
-                                    lessonNumber: index + 1,
-                                    stageColor: stage.color,
-                                    onClick: {
-                                        if !lesson.isLocked {
-                                            selectedLesson = lesson
-                                            showingLessonPopup = true
-                                        }
-                                    }
-                                )
-                                .scaleEffect(appearElements ? 1 : 0.7)
-                                .opacity(appearElements ? 1 : 0)
-                                .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.3 + 0.1 * Double(index)), value: appearElements)
-                            }
-                            .padding(.vertical, 8)
-                        }
-                    }
-                    .padding(.vertical, 20)
+                    lessonsPathView()
                 }
             }
         }
         .overlay(
-            ZStack {
-                // Modal para iniciar lección
-                if showingLessonPopup, let lesson = selectedLesson {
-                    LessonPopup(
-                        lesson: lesson,
-                        stage: stage,
-                        lessonNumber: getLessonNumber(lesson),
-                        totalLessons: stage.lessons.count,
-                        xpManager: xpManager,  // Pasando el xpManager
-                        onStart: {
-                            showingLessonPopup = false
-                            showingLesson = true
-                        },
-                        onClose: {
-                            showingLessonPopup = false
-                        }
-                    )
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                }
-            }
-            .animation(.easeInOut(duration: 0.3), value: showingLessonPopup)
+            lessonPopupView()
         )
         .fullScreenCover(isPresented: $showingLesson) {
             if let lesson = selectedLesson {
                 LessonView(
-                    lesson: lesson,
+                    lesson: convertToLesson(lesson),
                     stage: stage,
                     stageManager: stageManager,
                     xpManager: xpManager,
@@ -183,11 +69,160 @@ struct StageLessonsView: View {
         }
     }
     
-    private func getLessonNumber(_ lesson: Lesson) -> Int {
+    // MARK: - Helper Views
+    
+    @ViewBuilder
+    private func stageHeaderView() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(stage.name)
+                        .font(.system(.title, design: .rounded))
+                        .fontWeight(.bold)
+                        .foregroundColor(stage.color)
+                    
+                    Text(stage.description)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .opacity(appearElements ? 1 : 0)
+                .offset(x: appearElements ? 0 : -20)
+                .animation(.easeOut(duration: 0.5), value: appearElements)
+                
+                Spacer()
+                
+                // Progreso circular animado
+                ZStack {
+                    Circle()
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 8)
+                        .frame(width: 70, height: 70)
+                    
+                    Circle()
+                        .trim(from: 0.0, to: appearElements ? CGFloat(stage.completedLessonsCount) / CGFloat(stage.requiredLessons) : 0.0)
+                        .stroke(stage.color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                        .frame(width: 70, height: 70)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 1.2).delay(0.5), value: appearElements)
+                    
+                    Text("\(stage.completedLessonsCount)/\(stage.requiredLessons)")
+                        .font(.system(.headline, design: .rounded))
+                        .fontWeight(.bold)
+                        .foregroundColor(stage.color)
+                }
+                .opacity(appearElements ? 1 : 0)
+                .scaleEffect(appearElements ? 1 : 0.7)
+                .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.3), value: appearElements)
+            }
+            
+            // Barra de progreso horizontal
+            ProgressBar(value: CGFloat(stage.completedLessonsCount), total: CGFloat(stage.requiredLessons), color: stage.color)
+                .frame(height: 8)
+                .clipShape(Capsule())
+                .opacity(appearElements ? 1 : 0)
+                .animation(.easeOut(duration: 0.6).delay(0.4), value: appearElements)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 15)
+    }
+    
+    @ViewBuilder
+    private func lessonsPathView() -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(stage.lessons.enumerated()), id: \.element.id) { index, lesson in
+                VStack(spacing: 0) {
+                    // Línea conectora
+                    if index > 0 {
+                        if lesson.isLocked {
+                            DashedConnector(color: Color.gray.opacity(0.5))
+                                .frame(width: 4, height: 40)
+                                .opacity(appearElements ? 1 : 0)
+                                .animation(.easeOut(duration: 0.4).delay(0.3 + 0.05 * Double(index)), value: appearElements)
+                        } else {
+                            Rectangle()
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [stage.color.opacity(0.7), stage.color]),
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .frame(width: 4, height: 40)
+                                .opacity(appearElements ? 1 : 0)
+                                .animation(.easeOut(duration: 0.4).delay(0.3 + 0.05 * Double(index)), value: appearElements)
+                        }
+                    }
+                    
+                    // Nodo de la lección
+                    LessonCircleNode(
+                        lesson: lesson,
+                        lessonNumber: index + 1,
+                        stageColor: stage.color,
+                        onClick: {
+                            if !lesson.isLocked {
+                                selectedLesson = lesson
+                                showingLessonPopup = true
+                            }
+                        }
+                    )
+                    .scaleEffect(appearElements ? 1 : 0.7)
+                    .opacity(appearElements ? 1 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.3 + 0.1 * Double(index)), value: appearElements)
+                }
+                .padding(.vertical, 8)
+            }
+        }
+        .padding(.vertical, 20)
+    }
+    
+    @ViewBuilder
+    private func lessonPopupView() -> some View {
+        ZStack {
+            // Modal para iniciar lección
+            if showingLessonPopup, let lesson = selectedLesson {
+                LessonPopup(
+                    lesson: lesson,
+                    stage: stage,
+                    lessonNumber: getLessonNumber(lesson),
+                    totalLessons: stage.lessons.count,
+                    xpManager: xpManager,  // Pasando el xpManager
+                    onStart: {
+                        showingLessonPopup = false
+                        showingLesson = true
+                    },
+                    onClose: {
+                        showingLessonPopup = false
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showingLessonPopup)
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func getLessonNumber(_ lesson: LessonFromModelsFile) -> Int {
         if let idx = stage.lessons.firstIndex(where: { $0.id == lesson.id }) {
             return idx + 1
         }
         return 0
+    }
+    
+    // Convert LessonFromModelsFile to Lesson type for LessonView
+    private func convertToLesson(_ lessonFromModel: LessonFromModelsFile) -> Lesson {
+        return Lesson(
+            title: lessonFromModel.title,
+            description: lessonFromModel.description,
+            type: lessonFromModel.type,
+            timeLimit: lessonFromModel.timeLimit,
+            content: lessonFromModel.content,
+            questions: lessonFromModel.questions,
+            isCompleted: lessonFromModel.isCompleted,
+            isLocked: lessonFromModel.isLocked,
+            eyeExercises: lessonFromModel.eyeExercises,
+            pyramidExercise: lessonFromModel.pyramidExercise
+        )
     }
 }
 
@@ -242,7 +277,7 @@ struct DashedConnector: View {
 
 // Nodo del círculo de lección
 struct LessonCircleNode: View {
-    let lesson: Lesson
+    let lesson: LessonFromModelsFile
     let lessonNumber: Int
     let stageColor: Color
     let onClick: () -> Void
@@ -336,7 +371,7 @@ struct LessonCircleNode: View {
         .disabled(lesson.isLocked)
     }
     
-    private func getLessonIcon(_ lesson: Lesson) -> String {
+    private func getLessonIcon(_ lesson: LessonFromModelsFile) -> String {
         switch lesson.type {
         case .reading:
             return "book.fill"
@@ -352,7 +387,7 @@ struct LessonCircleNode: View {
 
 // Popup para iniciar lección
 struct LessonPopup: View {
-    let lesson: Lesson
+    let lesson: LessonFromModelsFile
     let stage: Stage
     let lessonNumber: Int
     let totalLessons: Int
@@ -499,7 +534,7 @@ struct LessonPopup: View {
         }
     }
     
-    private func getLessonIcon(_ lesson: Lesson) -> String {
+    private func getLessonIcon(_ lesson: LessonFromModelsFile) -> String {
         switch lesson.type {
         case .reading:
             return "book.fill"
