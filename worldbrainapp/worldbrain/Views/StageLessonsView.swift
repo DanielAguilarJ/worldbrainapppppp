@@ -271,7 +271,7 @@ struct LessonCircleNode: View {
                         }
                 }
                 
-                // Círculo principal - FIX: Asegurarnos que ambos lados del ternario son LinearGradient
+                // Círculo principal
                 Circle()
                     .fill(
                         lesson.isLocked ?
@@ -356,7 +356,7 @@ struct LessonPopup: View {
     let stage: Stage
     let lessonNumber: Int
     let totalLessons: Int
-    let xpManager: XPManager  // FIX: Agregando xpManager como propiedad
+    let xpManager: XPManager
     let onStart: () -> Void
     let onClose: () -> Void
     

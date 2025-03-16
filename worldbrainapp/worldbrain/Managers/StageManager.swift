@@ -32,7 +32,7 @@ class StageManager: ObservableObject {
             color: .blue,
             description: "Técnicas intermedias",
             requiredLessons: 30,
-            lessons: [], // sin contenido por ahora
+            lessons: [],
             isLocked: true
         )
         
@@ -58,12 +58,12 @@ class StageManager: ObservableObject {
     }
     
     /// Genera las 11 lecciones de la Etapa Verde con lecturas de distintos temas, entrenamientos oculares y visión periférica
-    private func generateGreenStageLessons() -> [Lesson] {
-        var lessons: [Lesson] = []
+    private func generateGreenStageLessons() -> [LessonFromModelsFile] {
+        var lessons: [LessonFromModelsFile] = []
         
         // Lección 1 (Lectura: Historia)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Lección 1",
                 description: "Breve introducción a la historia de la escritura",
                 type: .reading,
@@ -100,7 +100,7 @@ class StageManager: ObservableObject {
         
         // Lección 2 (Lectura: Ciencia)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Lección 2",
                 description: "La maravilla de las células en el cuerpo humano",
                 type: .reading,
@@ -137,7 +137,7 @@ class StageManager: ObservableObject {
         
         // Lección 3 (Lectura: Cultura)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Lección 3",
                 description: "El arte del café en distintas culturas",
                 type: .reading,
@@ -174,7 +174,7 @@ class StageManager: ObservableObject {
         
         // Lección 4 (Lectura: Desarrollo personal)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Lección 4",
                 description: "La importancia de la respiración consciente",
                 type: .reading,
@@ -200,9 +200,8 @@ class StageManager: ObservableObject {
         )
         
         // Lección 5 (Entrenamiento Ocular)
-        // Cada 5 lecciones es un ejercicio ocular
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Entrenamiento Ocular 5",
                 description: "Ejercicios para mejorar la movilidad y resistencia ocular",
                 type: .eyeTraining,
@@ -232,7 +231,7 @@ class StageManager: ObservableObject {
         
         // Lección 6 (Visión periférica - NUEVA LECCIÓN)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Visión Periférica 6",
                 description: "Entrenamiento de visión periférica con textos en pirámide",
                 type: .peripheralVision,
@@ -286,7 +285,7 @@ class StageManager: ObservableObject {
         
         // Lección 7 (Lectura: Historia de la ciencia)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Lección 7",
                 description: "Galileo y el telescopio",
                 type: .reading,
@@ -323,7 +322,7 @@ class StageManager: ObservableObject {
         
         // Lección 8 (Lectura: Tecnología)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Lección 8",
                 description: "Inteligencia Artificial en la vida diaria",
                 type: .reading,
@@ -350,7 +349,7 @@ class StageManager: ObservableObject {
         
         // Lección 9 (Lectura: Nutrición)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Lección 9",
                 description: "Vitaminas y minerales esenciales",
                 type: .reading,
@@ -377,7 +376,7 @@ class StageManager: ObservableObject {
         
         // Lección 10 (Entrenamiento Ocular)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Entrenamiento Ocular 10",
                 description: "Ejercicios para perfeccionar velocidad y enfoque",
                 type: .eyeTraining,
@@ -407,7 +406,7 @@ class StageManager: ObservableObject {
         
         // Lección 11 (Visión periférica - Segunda lección)
         lessons.append(
-            Lesson(
+            LessonFromModelsFile(
                 title: "Principiante - Visión Periférica 11",
                 description: "Texto en pirámide de dificultad media para ampliar tu percepción visual",
                 type: .peripheralVision,
