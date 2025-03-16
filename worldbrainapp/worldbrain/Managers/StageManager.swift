@@ -10,8 +10,15 @@ class StageManager: ObservableObject {
     @Published var stages: [Stage] = []
     @Published var selectedStage: Stage?
     
+    // Claves para UserDefaults
+    private let userDefaults = UserDefaults.standard
+    private let completedLessonsKey = "completedLessons"
+    private let unlockedLessonsKey = "unlockedLessons"
+    private let unlockedStagesKey = "unlockedStages"
+    
     init() {
         loadStages()
+        loadSavedProgress() // Carga el progreso guardado
         unlockFirstStage()
     }
     
@@ -55,6 +62,76 @@ class StageManager: ObservableObject {
         )
         
         stages = [greenStage, blueStage, redStage, blackStage]
+    }
+    
+    // NUEVO: Carga el progreso guardado de UserDefaults
+    private func loadSavedProgress() {
+        // Cargar lecciones completadas
+        let completedLessons = userDefaults.array(forKey: completedLessonsKey) as? [String] ?? []
+        
+        // Cargar lecciones desbloqueadas
+        let unlockedLessons = userDefaults.array(forKey: unlockedLessonsKey) as? [String] ?? []
+        
+        // Cargar etapas desbloqueadas
+        let unlockedStages = userDefaults.array(forKey: unlockedStagesKey) as? [Int] ?? []
+        
+        // Aplicar el estado guardado a las etapas y lecciones
+        for stageIndex in 0..<stages.count {
+            // Desbloquear etapas guardadas
+            if unlockedStages.contains(stageIndex) {
+                stages[stageIndex].isLocked = false
+            }
+            
+            // Procesar lecciones de la etapa
+            for lessonIndex in 0..<stages[stageIndex].lessons.count {
+                let lessonId = stages[stageIndex].lessons[lessonIndex].id.uuidString
+                
+                // Marcar lecciones completadas
+                if completedLessons.contains(lessonId) {
+                    stages[stageIndex].lessons[lessonIndex].isCompleted = true
+                }
+                
+                // Desbloquear lecciones
+                if unlockedLessons.contains(lessonId) {
+                    stages[stageIndex].lessons[lessonIndex].isLocked = false
+                }
+            }
+        }
+    }
+    
+    // NUEVO: Guarda el progreso en UserDefaults
+    private func saveProgress() {
+        var completedLessons: [String] = []
+        var unlockedLessons: [String] = []
+        var unlockedStages: [Int] = []
+        
+        // Recolectar información de estado actual
+        for stageIndex in 0..<stages.count {
+            // Guardar etapas desbloqueadas
+            if !stages[stageIndex].isLocked {
+                unlockedStages.append(stageIndex)
+            }
+            
+            // Procesar lecciones
+            for lesson in stages[stageIndex].lessons {
+                if lesson.isCompleted {
+                    completedLessons.append(lesson.id.uuidString)
+                }
+                
+                if !lesson.isLocked {
+                    unlockedLessons.append(lesson.id.uuidString)
+                }
+            }
+        }
+        
+        // Guardar en UserDefaults
+        userDefaults.set(completedLessons, forKey: completedLessonsKey)
+        userDefaults.set(unlockedLessons, forKey: unlockedLessonsKey)
+        userDefaults.set(unlockedStages, forKey: unlockedStagesKey)
+        userDefaults.synchronize() // Forzar guardado inmediato
+        
+        print("Progreso guardado: \(completedLessons.count) lecciones completadas")
+        print("Lecciones desbloqueadas: \(unlockedLessons.count)")
     }
     
     /// Genera las 11 lecciones de la Etapa Verde con lecturas de distintos temas, entrenamientos oculares y visión periférica
@@ -448,6 +525,9 @@ class StageManager: ObservableObject {
             )
         )
         
+        
+        // Añade el resto de las lecciones aquí...
+        
         return lessons
     }
     
@@ -456,6 +536,9 @@ class StageManager: ObservableObject {
         if !stages.isEmpty {
             stages[0].isLocked = false
             stages[0].lessons[0].isLocked = false
+            
+            // Guardar este estado inicial
+            saveProgress()
         }
     }
     
@@ -475,10 +558,32 @@ class StageManager: ObservableObject {
         // Si se completó la etapa, desbloquear la siguiente
         if stages[stageIndex].isCompleted && stageIndex + 1 < stages.count {
             stages[stageIndex + 1].isLocked = false
-            stages[stageIndex + 1].lessons[0].isLocked = false
+            if !stages[stageIndex + 1].lessons.isEmpty {
+                stages[stageIndex + 1].lessons[0].isLocked = false
+            }
         }
+        
+        // NUEVO: Guardar el progreso después de los cambios
+        saveProgress()
         
         // Notificar cambios
         objectWillChange.send()
+        
+        print("Lección completada y siguiente desbloqueada. ID: \(lessonId)")
+    }
+    
+    // NUEVO: Método para resetear el progreso (útil para pruebas)
+    func resetProgress() {
+        userDefaults.removeObject(forKey: completedLessonsKey)
+        userDefaults.removeObject(forKey: unlockedLessonsKey)
+        userDefaults.removeObject(forKey: unlockedStagesKey)
+        userDefaults.synchronize()
+        
+        loadStages()
+        unlockFirstStage()
+        
+        objectWillChange.send()
+        
+        print("Progreso reseteado")
     }
 }
