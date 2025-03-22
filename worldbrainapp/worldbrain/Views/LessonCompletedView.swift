@@ -15,6 +15,7 @@ struct LessonCompletedView: View {
     @State private var showingPoints = false
     @State private var showingStars = false
     @State private var animateProgress = false
+    @State private var lessonMarkedComplete = false
     
     var earnedXP: Int {
         let baseXP = xpManager.lessonXP
@@ -101,8 +102,12 @@ struct LessonCompletedView: View {
                 Spacer()
                 
                 Button(action: {
-                    xpManager.addXP(earnedXP)
-                    stageManager.completeLesson(stageIndex: stageIndex, lessonId: lesson.id)
+                    // No completar la lección si ya se ha hecho
+                    if !lessonMarkedComplete {
+                        xpManager.addXP(earnedXP)
+                        stageManager.completeLesson(stageIndex: stageIndex, lessonId: lesson.id)
+                        lessonMarkedComplete = true
+                    }
                     onContinue?()
                 }) {
                     Text("CONTINUAR")
@@ -136,4 +141,3 @@ struct LessonCompletedView: View {
         }
     }
 }
-

@@ -10,7 +10,7 @@ class StageManager: ObservableObject {
     @Published var stages: [Stage] = []
     @Published var selectedStage: Stage?
     
-    // Claves para UserDefaults
+    // Claves para persistencia
     private let userDefaults = UserDefaults.standard
     private let completedLessonsKey = "completedLessons"
     private let unlockedLessonsKey = "unlockedLessons"
@@ -18,7 +18,7 @@ class StageManager: ObservableObject {
     
     init() {
         loadStages()
-        loadSavedProgress() // Carga el progreso guardado
+        loadSavedProgress()
         unlockFirstStage()
     }
     
@@ -64,25 +64,21 @@ class StageManager: ObservableObject {
         stages = [greenStage, blueStage, redStage, blackStage]
     }
     
-    // NUEVO: Carga el progreso guardado de UserDefaults
+    // NUEVO: Cargar progreso guardado
     private func loadSavedProgress() {
-        // Cargar lecciones completadas
         let completedLessons = userDefaults.array(forKey: completedLessonsKey) as? [String] ?? []
-        
-        // Cargar lecciones desbloqueadas
         let unlockedLessons = userDefaults.array(forKey: unlockedLessonsKey) as? [String] ?? []
-        
-        // Cargar etapas desbloqueadas
         let unlockedStages = userDefaults.array(forKey: unlockedStagesKey) as? [Int] ?? []
         
-        // Aplicar el estado guardado a las etapas y lecciones
+        print("Cargando progreso: \(completedLessons.count) lecciones completadas y \(unlockedLessons.count) desbloqueadas")
+        
+        // Aplicar estados guardados a las etapas
         for stageIndex in 0..<stages.count {
-            // Desbloquear etapas guardadas
             if unlockedStages.contains(stageIndex) {
                 stages[stageIndex].isLocked = false
             }
             
-            // Procesar lecciones de la etapa
+            // Restaurar estado de lecciones
             for lessonIndex in 0..<stages[stageIndex].lessons.count {
                 let lessonId = stages[stageIndex].lessons[lessonIndex].id.uuidString
                 
@@ -91,7 +87,7 @@ class StageManager: ObservableObject {
                     stages[stageIndex].lessons[lessonIndex].isCompleted = true
                 }
                 
-                // Desbloquear lecciones
+                // Desbloquear lecciones guardadas
                 if unlockedLessons.contains(lessonId) {
                     stages[stageIndex].lessons[lessonIndex].isLocked = false
                 }
@@ -99,20 +95,17 @@ class StageManager: ObservableObject {
         }
     }
     
-    // NUEVO: Guarda el progreso en UserDefaults
+    // NUEVO: Guardar progreso
     private func saveProgress() {
         var completedLessons: [String] = []
         var unlockedLessons: [String] = []
         var unlockedStages: [Int] = []
         
-        // Recolectar información de estado actual
         for stageIndex in 0..<stages.count {
-            // Guardar etapas desbloqueadas
             if !stages[stageIndex].isLocked {
                 unlockedStages.append(stageIndex)
             }
             
-            // Procesar lecciones
             for lesson in stages[stageIndex].lessons {
                 if lesson.isCompleted {
                     completedLessons.append(lesson.id.uuidString)
@@ -124,11 +117,10 @@ class StageManager: ObservableObject {
             }
         }
         
-        // Guardar en UserDefaults
         userDefaults.set(completedLessons, forKey: completedLessonsKey)
         userDefaults.set(unlockedLessons, forKey: unlockedLessonsKey)
         userDefaults.set(unlockedStages, forKey: unlockedStagesKey)
-        userDefaults.synchronize() // Forzar guardado inmediato
+        userDefaults.synchronize()
         
         print("Progreso guardado: \(completedLessons.count) lecciones completadas")
         print("Lecciones desbloqueadas: \(unlockedLessons.count)")
@@ -526,8 +518,6 @@ class StageManager: ObservableObject {
         )
         
         
-        // Añade el resto de las lecciones aquí...
-        
         return lessons
     }
     
@@ -535,17 +525,22 @@ class StageManager: ObservableObject {
     private func unlockFirstStage() {
         if !stages.isEmpty {
             stages[0].isLocked = false
-            stages[0].lessons[0].isLocked = false
-            
-            // Guardar este estado inicial
-            saveProgress()
+            if !stages[0].lessons.isEmpty {
+                stages[0].lessons[0].isLocked = false
+                saveProgress() // Guardar este estado inicial
+            }
         }
     }
     
     /// Marca lección como completada y desbloquea la siguiente
     func completeLesson(stageIndex: Int, lessonId: UUID) {
+        print("Completando lección con id: \(lessonId)")
+        
         guard stageIndex < stages.count,
-              let lessonIndex = stages[stageIndex].lessons.firstIndex(where: { $0.id == lessonId }) else { return }
+              let lessonIndex = stages[stageIndex].lessons.firstIndex(where: { $0.id == lessonId }) else {
+            print("Error: No se encontró la lección o etapa")
+            return
+        }
         
         // Marcar la lección actual como completada
         stages[stageIndex].lessons[lessonIndex].isCompleted = true
@@ -553,6 +548,7 @@ class StageManager: ObservableObject {
         // Desbloquear siguiente lección si existe
         if lessonIndex + 1 < stages[stageIndex].lessons.count {
             stages[stageIndex].lessons[lessonIndex + 1].isLocked = false
+            print("Desbloqueando siguiente lección: \(lessonIndex + 1)")
         }
         
         // Si se completó la etapa, desbloquear la siguiente
@@ -563,27 +559,25 @@ class StageManager: ObservableObject {
             }
         }
         
-        // NUEVO: Guardar el progreso después de los cambios
+        // IMPORTANTE: Guardar el progreso después de los cambios
         saveProgress()
         
         // Notificar cambios
         objectWillChange.send()
-        
-        print("Lección completada y siguiente desbloqueada. ID: \(lessonId)")
     }
     
-    // NUEVO: Método para resetear el progreso (útil para pruebas)
+    // NUEVO: Método para resetear progreso (útil para pruebas)
     func resetProgress() {
         userDefaults.removeObject(forKey: completedLessonsKey)
         userDefaults.removeObject(forKey: unlockedLessonsKey)
         userDefaults.removeObject(forKey: unlockedStagesKey)
         userDefaults.synchronize()
         
+        // Recargar etapas
         loadStages()
         unlockFirstStage()
         
         objectWillChange.send()
-        
         print("Progreso reseteado")
     }
 }
