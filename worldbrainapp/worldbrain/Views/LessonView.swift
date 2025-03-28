@@ -39,6 +39,9 @@ struct LessonView: View {
     // Para cerrar esta vista si el usuario decide "Salir"
     @Environment(\.presentationMode) var presentationMode
     
+    // NUEVO: Para guardar el índice de la lección en la etapa
+    @State private var lessonIndex: Int = -1
+    
     var body: some View {
         ZStack {
             // Fondo dinámico
@@ -80,7 +83,8 @@ struct LessonView: View {
                 stageIndex: stageIndex,
                 readingSpeed: readingSpeed
             ) {
-                // Al terminar quiz
+                // Al terminar quiz - Ahora invocamos la función para completar la lección
+                completeLessonIfCorrect()
                 presentationMode.wrappedValue.dismiss()
                 onCloseLesson?()
             }
@@ -110,6 +114,17 @@ struct LessonView: View {
         }
         .onDisappear {
             timer?.invalidate()
+        }
+        .onAppear {
+            // Imprime información sobre la lección cuando se carga la vista
+            print("📱 Abriendo lección: \(lesson.title)")
+            print("📊 Datos de la lección - ID: \(lesson.id), Etapa: \(stageIndex)")
+            
+            // NUEVO: Busca el índice de la lección en la etapa por su título o número
+            findLessonIndex()
+            
+            // NUEVO: Imprimir todas las lecciones para diagnóstico
+            stageManager.printAllLessonIDs()
         }
     }
     
@@ -319,7 +334,6 @@ struct LessonView: View {
             .padding(.bottom, 30)
         }
     }
-    
     private var eyeTrainingContent: some View {
         VStack(spacing: 15) {
             Text("Entrenamiento Ocular")
@@ -410,7 +424,7 @@ struct LessonView: View {
                     .padding(.bottom, 30)
                 } else {
                     Button {
-                        completeLessonAndDismiss()
+                        completeLessonIfCorrect()
                     } label: {
                         Text("Finalizar")
                             .font(.headline)
@@ -499,7 +513,51 @@ struct LessonView: View {
         if let index = stage.lessons.firstIndex(where: { $0.id == lesson.id }) {
             return index + 1
         }
+        
+        // Si no encuentra por ID, intenta por título (más confiable)
+        if let index = stage.lessons.firstIndex(where: { $0.title == lesson.title }) {
+            return index + 1
+        }
+        
+        // Si todo falla, busca el número de lección en el título
+        let lessonTitle = lesson.title
+        if let range = lessonTitle.range(of: "Lección (\\d+)", options: .regularExpression) {
+            let numberString = lessonTitle[range].replacingOccurrences(of: "Lección ", with: "")
+            if let number = Int(numberString) {
+                return number
+            }
+        }
+        
         return 1
+    }
+    
+    // NUEVO: Método para encontrar el índice de la lección en StageManager
+    private func findLessonIndex() {
+        print("🔍 Buscando índice para la lección: \(lesson.title)")
+        
+        // 1. Primero intentar por ID exacto
+        if let index = stageManager.stages[stageIndex].lessons.firstIndex(where: { $0.id == lesson.id }) {
+            lessonIndex = index
+            print("✅ Lección encontrada por ID. Índice: \(index)")
+            return
+        }
+        
+        // 2. Intentar por título
+        if let index = stageManager.stages[stageIndex].lessons.firstIndex(where: { $0.title == lesson.title }) {
+            lessonIndex = index
+            print("✅ Lección encontrada por título. Índice: \(index)")
+            return
+        }
+        
+        // 3. Buscar el número de la lección en el título
+        let lessonNumber = getLessonNumber()
+        if lessonNumber > 0 && lessonNumber <= stageManager.stages[stageIndex].lessons.count {
+            lessonIndex = lessonNumber - 1
+            print("✅ Lección encontrada por número. Índice: \(lessonIndex)")
+            return
+        }
+        
+        print("⚠️ No se pudo encontrar el índice de la lección. Se usará estrategia alternativa.")
     }
     
     private func timeString(from timeInterval: TimeInterval) -> String {
@@ -562,7 +620,6 @@ struct LessonView: View {
             self.elapsedTime += 1
         }
     }
-    
     private func finishReading() {
         // Detener el cronómetro
         timer?.invalidate()
@@ -589,16 +646,85 @@ struct LessonView: View {
             readingSpeed = 0
         }
         
+        print("📚 Lectura finalizada - Velocidad: \(Int(readingSpeed)) palabras/minuto")
+        
         // Mostrar cuestionario después de una pequeña pausa
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             showingQuiz = true
         }
     }
     
-    private func completeLessonAndDismiss() {
-        xpManager.addXP(xpManager.lessonXP)
+    // MÉTODO CRÍTICO: Completa la lección usando diferentes estrategias
+    private func completeLessonIfCorrect() {
+        print("🔄 Intentando completar lección: \(lesson.title)")
+        
+        // Estrategia 1: Intentar completar por ID directo
+        print("📊 Verificando parámetros - stageIndex: \(stageIndex), lessonId: \(lesson.id)")
+        
+        // Añadir XP siempre (independientemente de la estrategia usada)
+        let xpToAdd = xpManager.lessonXP
+        print("💎 Añadiendo \(xpToAdd) XP")
+        xpManager.addXP(xpToAdd)
+        
+        // Primero intentamos completar utilizando el ID directo
+        print("✅ Estrategia 1: Intentando completar por ID")
         stageManager.completeLesson(stageIndex: stageIndex, lessonId: lesson.id)
+        
+        // Verificamos si la estrategia 1 funcionó buscando si la lección está marcada como completada
+        if let lessonInManager = stageManager.stages[stageIndex].lessons.first(where: { $0.id == lesson.id }) {
+            if lessonInManager.isCompleted {
+                print("✅ Lección completada exitosamente por ID")
+                cerrarVista()
+                return
+            }
+        }
+        
+        // Estrategia 2: Intentar completar usando el índice encontrado
+        if lessonIndex >= 0 && lessonIndex < stageManager.stages[stageIndex].lessons.count {
+            print("✅ Estrategia 2: Completando por índice: \(lessonIndex)")
+            
+            // Usamos el método interno del StageManager que acepta índice directo
+            if let lessonToComplete = stageManager.stages[stageIndex].lessons[safe: lessonIndex] {
+                print("🔄 Completando lección: \(lessonToComplete.title), ID: \(lessonToComplete.id)")
+                stageManager.completeLesson(stageIndex: stageIndex, lessonId: lessonToComplete.id)
+                
+                // Verificar si ahora está marcada como completada
+                if stageManager.stages[stageIndex].lessons[lessonIndex].isCompleted {
+                    print("✅ Lección completada exitosamente por índice")
+                    cerrarVista()
+                    return
+                }
+            }
+        }
+        
+        // Estrategia 3: Encontrar la primera lección no completada y marcarla
+        print("✅ Estrategia 3: Buscando primera lección incompleta")
+        if let firstIncompleteLessonIndex = stageManager.stages[stageIndex].lessons.firstIndex(where: { !$0.isCompleted }) {
+            let lessonToComplete = stageManager.stages[stageIndex].lessons[firstIncompleteLessonIndex]
+            print("🔄 Completando primera lección pendiente: \(lessonToComplete.title)")
+            stageManager.completeLesson(stageIndex: stageIndex, lessonId: lessonToComplete.id)
+            print("✅ Primera lección pendiente completada")
+        }
+        
+        print("🎉 Lección completada y XP añadidos")
+        cerrarVista()
+    }
+    
+    // Función auxiliar para cerrar la vista actual
+    private func cerrarVista() {
         presentationMode.wrappedValue.dismiss()
         onCloseLesson?()
+    }
+    
+    // Función existente mantenida por compatibilidad
+    private func completeLessonAndDismiss() {
+        completeLessonIfCorrect()
+    }
+}
+
+// EXTENSIÓN PARA ACCESO SEGURO A ARRAYS
+extension Array {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }

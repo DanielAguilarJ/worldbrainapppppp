@@ -38,6 +38,13 @@ struct LessonPathView: View {
             }
         }
         .onAppear {
+            // Depuración: Mostrar estado de la etapa y sus lecciones
+            print("📱 Cargando LessonPathView - Etapa: \(stageIndex) - \(stage.name)")
+            print("📊 Estado etapa - Bloqueada: \(stage.isLocked ? "Sí" : "No"), Lecciones completadas: \(stage.completedLessonsCount)/\(stage.requiredLessons)")
+            
+            // NUEVO: Solicitar a StageManager que imprima los IDs de todas las lecciones
+            stageManager.printAllLessonIDs()
+            
             // Activar animaciones cuando aparece la vista
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 withAnimation {
@@ -187,8 +194,11 @@ struct LessonPathView: View {
                 isAnimated: animateItems,
                 onTap: {
                     if !lesson.isLocked {
+                        print("🔸 Seleccionando lección: \(lesson.title) - ID: \(lesson.id)")
                         selectedLesson = lesson
                         showingLessonModal = true
+                    } else {
+                        print("🔒 Lección bloqueada: \(lesson.title)")
                     }
                 }
             )
@@ -196,8 +206,15 @@ struct LessonPathView: View {
     }
     
     // Método para convertir de LessonFromModelsFile a Lesson
+    // MODIFICADO: Asegurar que el ID se preserve exactamente igual
     private func convertToLesson(_ lessonFromModel: LessonFromModelsFile) -> Lesson {
+        // IMPORTANTE: Conservamos el ID original
+        let originalID = lessonFromModel.id
+        
+        print("🔄 Convirtiendo lección - Título: \(lessonFromModel.title), ID original: \(originalID)")
+        
         return Lesson(
+            
             title: lessonFromModel.title,
             description: lessonFromModel.description,
             type: lessonFromModel.type,
@@ -249,6 +266,7 @@ struct LessonNode: View {
         }
         .disabled(lesson.isLocked)
         .onAppear {
+            // Solo activar la animación de pulso para lecciones actuales (desbloqueadas pero no completadas)
             if !lesson.isLocked && !lesson.isCompleted {
                 withAnimation {
                     isPulsing = true
@@ -388,6 +406,15 @@ struct LessonNode: View {
                         LessonBadge(
                             icon: "eye.circle.fill",
                             text: "Visión periférica",
+                            color: .green
+                        )
+                    }
+                    
+                    // Badge para lecciones completadas
+                    if lesson.isCompleted {
+                        LessonBadge(
+                            icon: "checkmark.circle.fill",
+                            text: "Completada",
                             color: .green
                         )
                     }
