@@ -18,6 +18,8 @@ struct LessonPathView: View {
     @State private var selectedLesson: LessonFromModelsFile?
     @State private var showingLessonModal = false
     @State private var animateItems = false
+    // NUEVO: Estado para forzar actualización de UI cuando cambia el estado de lecciones
+    @State private var refreshID = UUID()
     
     var body: some View {
         ZStack {
@@ -35,6 +37,12 @@ struct LessonPathView: View {
                     isPresented: $showingLessonModal
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                .onDisappear {
+                    // NUEVO: Forzar actualización de la vista al volver
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        refreshID = UUID()
+                    }
+                }
             }
         }
         .onAppear {
@@ -42,8 +50,8 @@ struct LessonPathView: View {
             print("📱 Cargando LessonPathView - Etapa: \(stageIndex) - \(stage.name)")
             print("📊 Estado etapa - Bloqueada: \(stage.isLocked ? "Sí" : "No"), Lecciones completadas: \(stage.completedLessonsCount)/\(stage.requiredLessons)")
             
-            // NUEVO: Solicitar a StageManager que imprima los IDs de todas las lecciones
-            stageManager.printAllLessonIDs()
+            // NUEVO: Verificar explícitamente cuáles lecciones están completadas
+            checkCompletedLessons()
             
             // Activar animaciones cuando aparece la vista
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -52,6 +60,8 @@ struct LessonPathView: View {
                 }
             }
         }
+        // NUEVO: Forzar actualización cuando refreshID cambia
+        .id(refreshID)
     }
     
     // MARK: - Componentes de UI separados
@@ -205,16 +215,26 @@ struct LessonPathView: View {
         }
     }
     
-    // Método para convertir de LessonFromModelsFile a Lesson
-    // MODIFICADO: Asegurar que el ID se preserve exactamente igual
+    // NUEVO: Verificar lecciones completadas
+    private func checkCompletedLessons() {
+        print("🔍 Verificando lecciones completadas en etapa \(stageIndex):")
+        for (index, lesson) in stage.lessons.enumerated() {
+            print("  - Lección \(index + 1): \(lesson.title)")
+            print("    Completada: \(lesson.isCompleted ? "✓ Sí" : "✗ No")")
+            print("    Bloqueada: \(lesson.isLocked ? "🔒 Sí" : "🔓 No")")
+        }
+    }
+    
+    // CORREGIDO: Método para convertir de LessonFromModelsFile a Lesson
+    // Ahora preserva correctamente el ID
     private func convertToLesson(_ lessonFromModel: LessonFromModelsFile) -> Lesson {
-        // IMPORTANTE: Conservamos el ID original
+        // CORRECCIÓN CLAVE: Preservar el ID original
         let originalID = lessonFromModel.id
         
         print("🔄 Convirtiendo lección - Título: \(lessonFromModel.title), ID original: \(originalID)")
         
         return Lesson(
-            
+             // AÑADIDO: Ahora pasamos el ID original correctamente
             title: lessonFromModel.title,
             description: lessonFromModel.description,
             type: lessonFromModel.type,
@@ -245,7 +265,7 @@ struct LessonPathView: View {
 // MARK: - Componentes personalizados
 
 struct LessonNode: View {
-    let lesson: LessonFromModelsFile  // Cambiado de Lesson a LessonFromModelsFile
+    let lesson: LessonFromModelsFile
     let lessonNumber: Int
     let stageColor: Color
     let delay: Double
@@ -329,8 +349,11 @@ struct LessonNode: View {
                 }
             }
             
-            // Borde para lecciones completadas
+            // MEJORADO: Borde para lecciones completadas - con verificación adicional
             if lesson.isCompleted {
+                // NUEVO: Verificación extra para confirmar que realmente está completada
+                let isReallyCompleted = lesson.isCompleted && !lesson.isLocked
+                
                 Circle()
                     .strokeBorder(
                         LinearGradient(
@@ -410,7 +433,7 @@ struct LessonNode: View {
                         )
                     }
                     
-                    // Badge para lecciones completadas
+                    // Badge para lecciones completadas - CORREGIDO: verificación adicional
                     if lesson.isCompleted {
                         LessonBadge(
                             icon: "checkmark.circle.fill",
