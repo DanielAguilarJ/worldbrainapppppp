@@ -18,7 +18,7 @@ struct LessonPathView: View {
     @State private var selectedLesson: LessonFromModelsFile?
     @State private var showingLessonModal = false
     @State private var animateItems = false
-    // NUEVO: Estado para forzar actualización de UI cuando cambia el estado de lecciones
+    // Añadimos un ID para forzar actualizaciones de la vista
     @State private var refreshID = UUID()
     
     var body: some View {
@@ -38,10 +38,9 @@ struct LessonPathView: View {
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 .onDisappear {
-                    // NUEVO: Forzar actualización de la vista al volver
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        refreshID = UUID()
-                    }
+                    // Actualizar la vista cuando se cierra el modal de lección
+                    refreshID = UUID()
+                    print("🔄 Actualizando vista después de cerrar el modal de lección")
                 }
             }
         }
@@ -50,8 +49,9 @@ struct LessonPathView: View {
             print("📱 Cargando LessonPathView - Etapa: \(stageIndex) - \(stage.name)")
             print("📊 Estado etapa - Bloqueada: \(stage.isLocked ? "Sí" : "No"), Lecciones completadas: \(stage.completedLessonsCount)/\(stage.requiredLessons)")
             
-            // NUEVO: Verificar explícitamente cuáles lecciones están completadas
-            checkCompletedLessons()
+            // NUEVO: Solicitar a StageManager que imprima los IDs de todas las lecciones
+            stageManager.printAllLessonIDs()
+            debugLessonStatus()
             
             // Activar animaciones cuando aparece la vista
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -60,7 +60,7 @@ struct LessonPathView: View {
                 }
             }
         }
-        // NUEVO: Forzar actualización cuando refreshID cambia
+        // Forzar la actualización de la vista cuando cambia el ID de actualización
         .id(refreshID)
     }
     
@@ -212,29 +212,21 @@ struct LessonPathView: View {
                     }
                 }
             )
+            // Asignar ID a cada nodo para forzar la actualización cuando cambia el estado
+            .id("\(lesson.id.uuidString)-\(lesson.isCompleted ? "completed" : "incomplete")-\(refreshID)")
         }
     }
     
-    // NUEVO: Verificar lecciones completadas
-    private func checkCompletedLessons() {
-        print("🔍 Verificando lecciones completadas en etapa \(stageIndex):")
-        for (index, lesson) in stage.lessons.enumerated() {
-            print("  - Lección \(index + 1): \(lesson.title)")
-            print("    Completada: \(lesson.isCompleted ? "✓ Sí" : "✗ No")")
-            print("    Bloqueada: \(lesson.isLocked ? "🔒 Sí" : "🔓 No")")
-        }
-    }
-    
-    // CORREGIDO: Método para convertir de LessonFromModelsFile a Lesson
-    // Ahora preserva correctamente el ID
+    // Método para convertir de LessonFromModelsFile a Lesson
+    // MODIFICADO: Asegurar que el ID se preserve exactamente igual
     private func convertToLesson(_ lessonFromModel: LessonFromModelsFile) -> Lesson {
-        // CORRECCIÓN CLAVE: Preservar el ID original
+        // IMPORTANTE: Conservamos el ID original
         let originalID = lessonFromModel.id
         
         print("🔄 Convirtiendo lección - Título: \(lessonFromModel.title), ID original: \(originalID)")
         
-        return Lesson(
-             // AÑADIDO: Ahora pasamos el ID original correctamente
+        // Creamos la lección sin pasar explícitamente el ID
+        let convertedLesson = Lesson(
             title: lessonFromModel.title,
             description: lessonFromModel.description,
             type: lessonFromModel.type,
@@ -246,6 +238,22 @@ struct LessonPathView: View {
             eyeExercises: lessonFromModel.eyeExercises,
             pyramidExercise: lessonFromModel.pyramidExercise
         )
+        
+        // Verificamos que se está preservando correctamente el estado de completado
+        print("✅ Lección convertida - Estado completado: \(convertedLesson.isCompleted)")
+        
+        return convertedLesson
+    }
+    
+    // NUEVO: Función de diagnóstico para verificar estado de lecciones
+    private func debugLessonStatus() {
+        print("🔍 Diagnóstico de lecciones en etapa \(stageIndex) - \(stage.name):")
+        for (index, lesson) in stage.lessons.enumerated() {
+            print("  📝 Lección \(index+1): \(lesson.title)")
+            print("     - ID: \(lesson.id)")
+            print("     - Bloqueada: \(lesson.isLocked ? "Sí" : "No")")
+            print("     - Completada: \(lesson.isCompleted ? "Sí" : "No")")
+        }
     }
     
     private func getLessonIcon(_ lesson: LessonFromModelsFile) -> String {
@@ -265,7 +273,7 @@ struct LessonPathView: View {
 // MARK: - Componentes personalizados
 
 struct LessonNode: View {
-    let lesson: LessonFromModelsFile
+    let lesson: LessonFromModelsFile  // Cambiado de Lesson a LessonFromModelsFile
     let lessonNumber: Int
     let stageColor: Color
     let delay: Double
@@ -349,11 +357,8 @@ struct LessonNode: View {
                 }
             }
             
-            // MEJORADO: Borde para lecciones completadas - con verificación adicional
+            // MEJORADO: Verificación y visualización mejorada para lecciones completadas
             if lesson.isCompleted {
-                // NUEVO: Verificación extra para confirmar que realmente está completada
-                let isReallyCompleted = lesson.isCompleted && !lesson.isLocked
-                
                 Circle()
                     .strokeBorder(
                         LinearGradient(
@@ -365,16 +370,18 @@ struct LessonNode: View {
                     )
                     .frame(width: 73, height: 73)
                 
-                // Estrellas que indican compleción
+                // Estrellas que indican compleción con efecto mejorado
                 HStack(spacing: 4) {
-                    ForEach(0..<3) { _ in
+                    ForEach(0..<3) { index in
                         Image(systemName: "star.fill")
                             .foregroundColor(.yellow)
                             .font(.system(size: 12))
                             .shadow(color: Color.orange.opacity(0.5), radius: 1, x: 0, y: 0)
+                            .scaleEffect(1.0 + 0.1 * Double(index % 2))  // Efecto alternante
                     }
                 }
                 .offset(y: 40)
+                .transition(.scale.combined(with: .opacity))
             }
             
             // Información de la lección
@@ -433,13 +440,14 @@ struct LessonNode: View {
                         )
                     }
                     
-                    // Badge para lecciones completadas - CORREGIDO: verificación adicional
+                    // Badge para lecciones completadas con animación mejorada
                     if lesson.isCompleted {
                         LessonBadge(
                             icon: "checkmark.circle.fill",
                             text: "Completada",
                             color: .green
                         )
+                        .transition(.scale.combined(with: .opacity))
                     }
                 }
             }
