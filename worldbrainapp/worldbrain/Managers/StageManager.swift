@@ -151,7 +151,7 @@ class StageManager: ObservableObject {
                            type: .reading,
                            timeLimit: 180,
                            content: """
-                           Desde los antiguos sumerios hasta las civilizaciones modernas, la escritura ha sido una herramienta esencial para transmitir conocimiento. Los sumerios desarrollaron una de las primera[...]
+                           Desde los antiguos sumerios hasta las civilizaciones modernas, la escritura ha sido una herramienta esencial para transmitir conocimiento. Los sumerios desarrollaron una de [...]
                            """,
                            questions: [
                                Question(
@@ -188,7 +188,7 @@ class StageManager: ObservableObject {
                            type: .reading,
                            timeLimit: 180,
                            content: """
-                           El cuerpo humano está compuesto por trillones de células que trabajan de forma coordinada. Cada célula contiene información genética almacenada en el ADN, el cual dirige el crecim[...]
+                           El cuerpo humano está compuesto por trillones de células que trabajan de forma coordinada. Cada célula contiene información genética almacenada en el ADN, el cual dirig[...]
                            """,
                            questions: [
                                Question(
@@ -225,7 +225,7 @@ class StageManager: ObservableObject {
                            type: .reading,
                            timeLimit: 180,
                            content: """
-                           El café es una de las bebidas más consumidas en el mundo. Desde el espresso italiano hasta el café de olla en México, cada cultura ha desarrollado su forma única de prepararlo. El[...]
+                           El café es una de las bebidas más consumidas en el mundo. Desde el espresso italiano hasta el café de olla en México, cada cultura ha desarrollado su forma única de pre[...]
                            """,
                            questions: [
                                Question(
@@ -262,7 +262,7 @@ class StageManager: ObservableObject {
                            type: .reading,
                            timeLimit: 180,
                            content: """
-                           Practicar la respiración consciente puede mejorar la concentración y disminuir el estrés. Al inhalar profundamente y exhalar lentamente, el ritmo cardiaco se regula y la mente se vu[...]
+                           Practicar la respiración consciente puede mejorar la concentración y disminuir el estrés. Al inhalar profundamente y exhalar lentamente, el ritmo cardiaco se regula y la [...]
                            """,
                            questions: [
                                Question(
@@ -373,7 +373,7 @@ class StageManager: ObservableObject {
                            type: .reading,
                            timeLimit: 180,
                            content: """
-                           Galileo Galilei fue uno de los primeros en utilizar el telescopio para observar el cielo. Sus descubrimientos, como las lunas de Júpiter y las fases de Venus, desafiaron la visión ge[...]
+                           Galileo Galilei fue uno de los primeros en utilizar el telescopio para observar el cielo. Sus descubrimientos, como las lunas de Júpiter y las fases de Venus, desafiaron la[...]
                            """,
                            questions: [
                                Question(
@@ -410,7 +410,7 @@ class StageManager: ObservableObject {
                            type: .reading,
                            timeLimit: 180,
                            content: """
-                           La inteligencia artificial se ha vuelto cada vez más común en aplicaciones cotidianas. Desde los asistentes virtuales en nuestros teléfonos hasta los algoritmos de recomendación en[...]
+                           La inteligencia artificial se ha vuelto cada vez más común en aplicaciones cotidianas. Desde los asistentes virtuales en nuestros teléfonos hasta los algoritmos de recome[...]
                            """,
                            questions: [
                                Question(
@@ -437,7 +437,7 @@ class StageManager: ObservableObject {
                            type: .reading,
                            timeLimit: 180,
                            content: """
-                           Las vitaminas y minerales son micronutrientes fundamentales para el correcto funcionamiento del cuerpo. Por ejemplo, la vitamina C fortalece el sistema inmunológico, mientras que el h[...]
+                           Las vitaminas y minerales son micronutrientes fundamentales para el correcto funcionamiento del cuerpo. Por ejemplo, la vitamina C fortalece el sistema inmunológico, mientr[...]
                            """,
                            questions: [
                                Question(
@@ -546,7 +546,7 @@ class StageManager: ObservableObject {
         }
     }
     
-    /// Marca lección como completada y desbloquea la siguiente
+    /// MÉTODO CORREGIDO: Marca lección como completada y desbloquea la siguiente
     /// - Parameters:
     ///   - stageIndex: Índice de la etapa (0 para Verde, 1 para Azul, etc.)
     ///   - lessonId: UUID identificador único de la lección
@@ -559,21 +559,16 @@ class StageManager: ObservableObject {
             return
         }
         
-        // Primero intentamos encontrar por ID exacto
+        // MÉTODO MEJORADO: Primero intenta buscar por ID exacto
         if let lessonIndex = stages[stageIndex].lessons.firstIndex(where: { $0.id == lessonId }) {
+            print("✅ Estrategia 1: Completando por ID exacto: \(lessonId)")
             completeLessonByIndex(stageIndex: stageIndex, lessonIndex: lessonIndex)
-        } else {
-            // Si no encontramos por ID, buscar lección por posición en la lista
-            print("⚠️ No se encontró lección con ID \(lessonId). Verificando lecciones actuales...")
+            print("✅ Lección completada exitosamente por ID")
+        }
+        // AQUÍ TERMINA LA BÚSQUEDA - No se intenta completar otras lecciones automáticamente
+        else {
+            print("❌ No se encontró ninguna lección con ID \(lessonId) en la etapa \(stageIndex)")
             printAllLessonIDs()
-            
-            // Estrategia alternativa: completar la primera lección que no esté completada
-            if let firstIncompleteLessonIndex = stages[stageIndex].lessons.firstIndex(where: { !$0.isCompleted }) {
-                print("🔍 Se encontró una lección incompleta (índice \(firstIncompleteLessonIndex)). Intentando completarla...")
-                completeLessonByIndex(stageIndex: stageIndex, lessonIndex: firstIncompleteLessonIndex)
-            } else {
-                print("❌ No se pudo encontrar una lección para completar en la etapa \(stageIndex)")
-            }
         }
     }
     
