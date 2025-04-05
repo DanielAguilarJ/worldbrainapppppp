@@ -35,25 +35,40 @@ struct FinalExamView: View {
     @State private var showControls = true
     @State private var contentOpacity: Double = 1.0
     
+    // Making initializer public by explicitly defining it
+    public init(
+        stage: Stage,
+        stageManager: StageManager,
+        xpManager: XPManager,
+        stageIndex: Int,
+        onComplete: @escaping (Bool) -> Void
+    ) {
+        self.stage = stage
+        self.stageManager = stageManager
+        self.xpManager = xpManager
+        self.stageIndex = stageIndex
+        self.onComplete = onComplete
+    }
+    
     // Contenido de la prueba (texto más largo para evaluar velocidad)
     private let examContent = """
-    La lectura rápida es una habilidad que puede transformar tu relación con los libros y la información. Cuando dominas las técnicas adecuadas, puedes absorber conocimiento a velocidades que antes parecían imposibles, manteniendo o incluso mejorando tu comprensión.
+    La lectura rápida es una habilidad que puede transformar tu relación con los libros y la información. Cuando dominas las técnicas adecuadas, puedes absorber conocimiento a velocidades que ante[...]
     
-    El cerebro humano es capaz de procesar información mucho más rápido de lo que la mayoría de personas lee. En realidad, la lectura lenta frecuentemente se debe a malos hábitos como la subvocalización (pronunciar mentalmente cada palabra) y la regresión (releer líneas innecesariamente).
+    El cerebro humano es capaz de procesar información mucho más rápido de lo que la mayoría de personas lee. En realidad, la lectura lenta frecuentemente se debe a malos hábitos como la subvocal[...]
     
-    Para mejorar tu velocidad de lectura, es fundamental ampliar tu visión periférica. Los lectores promedio captan entre una y tres palabras en cada fijación de ojos, mientras que los lectores rápidos pueden abarcar líneas completas. Esto se logra con práctica constante y ejercicios específicos.
+    Para mejorar tu velocidad de lectura, es fundamental ampliar tu visión periférica. Los lectores promedio captan entre una y tres palabras en cada fijación de ojos, mientras que los lectores rá[...]
     
-    Otra técnica importante es utilizar un guía, como puede ser tu dedo o un bolígrafo, para marcar el ritmo y mantener tus ojos en movimiento constante. Esto ayuda a eliminar distracciones y evita que tu mirada se desvíe.
+    Otra técnica importante es utilizar un guía, como puede ser tu dedo o un bolígrafo, para marcar el ritmo y mantener tus ojos en movimiento constante. Esto ayuda a eliminar distracciones y evita[...]
     
-    La velocidad de lectura se puede incrementar gradualmente. Comenzando por medir tu nivel actual en palabras por minuto, puedes establecer objetivos realistas e ir superándolos poco a poco. La práctica diaria es esencial para consolidar cualquier nueva habilidad cognitiva.
+    La velocidad de lectura se puede incrementar gradualmente. Comenzando por medir tu nivel actual en palabras por minuto, puedes establecer objetivos realistas e ir superándolos poco a poco. La pr�[...]
     
-    Los ejercicios oculares también juegan un papel crucial. Fortalecer los músculos de tus ojos y mejorar su flexibilidad te permite realizar movimientos más eficientes durante la lectura, reduciendo la fatiga visual.
+    Los ejercicios oculares también juegan un papel crucial. Fortalecer los músculos de tus ojos y mejorar su flexibilidad te permite realizar movimientos más eficientes durante la lectura, reducie[...]
     
-    Cuando aprendes a leer más rápido, descubres que puedes consumir más libros, artículos y documentación en menos tiempo. Esto no solo te da una ventaja profesional, sino que enriquece tu conocimiento general y expande tus horizontes.
+    Cuando aprendes a leer más rápido, descubres que puedes consumir más libros, artículos y documentación en menos tiempo. Esto no solo te da una ventaja profesional, sino que enriquece tu conoc[...]
     
-    La clave está en la perseverancia. Como cualquier habilidad valiosa, la lectura veloz requiere dedicación y práctica regular. Los resultados no llegan de la noche a la mañana, pero con consistencia, puedes duplicar o incluso triplicar tu velocidad natural.
+    La clave está en la perseverancia. Como cualquier habilidad valiosa, la lectura veloz requiere dedicación y práctica regular. Los resultados no llegan de la noche a la mañana, pero con consist[...]
     
-    Recuerda que el objetivo final no es solo leer rápido, sino comprender y retener el material de forma efectiva. Por eso, es importante complementar tus técnicas de velocidad con estrategias de comprensión activa y memorización.
+    Recuerda que el objetivo final no es solo leer rápido, sino comprender y retener el material de forma efectiva. Por eso, es importante complementar tus técnicas de velocidad con estrategias de c[...]
     
     Al dominar estas habilidades, transformarás radicalmente tu capacidad de aprendizaje, haciendo que la adquisición de conocimiento sea más eficiente y placentera para toda la vida.
     """
@@ -354,7 +369,7 @@ struct FinalExamView: View {
                 
                 Divider()
                 
-                Text(testPassed 
+                Text(testPassed
                      ? "Has demostrado tener las habilidades necesarias para avanzar a la siguiente etapa. ¡Felicidades!"
                      : "Sigue practicando las lecciones de esta etapa y vuelve a intentarlo cuando te sientas preparado.")
                     .font(.body)

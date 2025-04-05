@@ -62,6 +62,20 @@ struct LessonPathView: View {
         }
         // Forzar la actualización de la vista cuando cambia el ID de actualización
         .id(refreshID)
+        // NUEVO: Añadir presentación de examen final cuando se complete la última lección
+        .fullScreenCover(isPresented: $stageManager.showFinalExam) {
+            // Simplificamos el código para evitar errores
+            FinalExamView(
+                stage: stage,
+                stageManager: stageManager,
+                xpManager: xpManager,
+                stageIndex: stageIndex,
+                onComplete: { _ in
+                    stageManager.showFinalExam = false
+                    refreshID = UUID()
+                }
+            )
+        }
     }
     
     // MARK: - Componentes de UI separados
@@ -217,11 +231,15 @@ struct LessonPathView: View {
         }
     }
     
-    // MÉTODO CORREGIDO: Convertir de LessonFromModelsFile a Lesson
+    // Método para convertir de LessonFromModelsFile a Lesson
+    // CORREGIDO: Método para convertir de LessonFromModelsFile a Lesson
     private func convertToLesson(_ lessonFromModel: LessonFromModelsFile) -> Lesson {
-        print("🔄 Convirtiendo lección - Título: \(lessonFromModel.title), ID original: \(lessonFromModel.id)")
+        // CORRECCIÓN CLAVE: Preservar el ID original
+        let originalID = lessonFromModel.id
         
-        // Creamos una instancia de Lesson sin pasar el ID explícitamente
+        print("🔄 Convirtiendo lección - Título: \(lessonFromModel.title), ID original: \(originalID)")
+        
+        // Corregido: Respetamos el constructor de Lesson (sin pasar id si no lo acepta)
         return Lesson(
             title: lessonFromModel.title,
             description: lessonFromModel.description,
