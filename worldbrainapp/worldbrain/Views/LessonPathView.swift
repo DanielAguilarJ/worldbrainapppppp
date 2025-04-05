@@ -218,15 +218,17 @@ struct LessonPathView: View {
     }
     
     // Método para convertir de LessonFromModelsFile a Lesson
-    // MODIFICADO: Asegurar que el ID se preserve exactamente igual
+    // CORREGIDO: Método para convertir de LessonFromModelsFile a Lesson
+    // Ahora preserva correctamente el ID
     private func convertToLesson(_ lessonFromModel: LessonFromModelsFile) -> Lesson {
-        // IMPORTANTE: Conservamos el ID original
+        // CORRECCIÓN CLAVE: Preservar el ID original
         let originalID = lessonFromModel.id
         
         print("🔄 Convirtiendo lección - Título: \(lessonFromModel.title), ID original: \(originalID)")
         
-        // Creamos la lección sin pasar explícitamente el ID
-        let convertedLesson = Lesson(
+        // MODIFICADO: Pasamos el ID original como primer parámetro
+        return Lesson(
+            id: originalID,  // AQUÍ ESTÁ LA CORRECCIÓN CLAVE
             title: lessonFromModel.title,
             description: lessonFromModel.description,
             type: lessonFromModel.type,
@@ -238,11 +240,6 @@ struct LessonPathView: View {
             eyeExercises: lessonFromModel.eyeExercises,
             pyramidExercise: lessonFromModel.pyramidExercise
         )
-        
-        // Verificamos que se está preservando correctamente el estado de completado
-        print("✅ Lección convertida - Estado completado: \(convertedLesson.isCompleted)")
-        
-        return convertedLesson
     }
     
     // NUEVO: Función de diagnóstico para verificar estado de lecciones
