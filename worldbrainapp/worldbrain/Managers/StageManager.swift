@@ -700,4 +700,37 @@ class StageManager: ObservableObject {
         
         return stages[stageIndex].lessons[lessonIndex]
     }
+    
+    // Add this new method to your StageManager class
+    func unlockNextStage(afterStageIndex: Int) {
+        guard afterStageIndex >= 0 && afterStageIndex < stages.count - 1 else {
+            print("❌ Invalid stage index for unlocking next stage: \(afterStageIndex)")
+            return
+        }
+        
+        let nextStageIndex = afterStageIndex + 1
+        if stages[nextStageIndex].isLocked {
+            print("🔓 Desbloqueando siguiente etapa: \(nextStageIndex)")
+            stages[nextStageIndex].isLocked = false
+            
+            // Desbloquear primera lección de la siguiente etapa
+            if !stages[nextStageIndex].lessons.isEmpty {
+                print("🔓 Desbloqueando primera lección de la etapa \(nextStageIndex)")
+                stages[nextStageIndex].lessons[0].isLocked = false
+                // Asegurar que la primera lección de la etapa siguiente NO está marcada como completada
+                stages[nextStageIndex].lessons[0].isCompleted = false
+            } else {
+                print("⚠️ La etapa \(nextStageIndex) no tiene lecciones para desbloquear")
+            }
+            
+            // Guardar el progreso después de los cambios
+            saveProgress()
+            
+            // Notificar cambios para actualizar la interfaz
+            objectWillChange.send()
+            print("💾 Progreso guardado y UI actualizada - Etapa \(nextStageIndex) desbloqueada")
+        } else {
+            print("ℹ️ La siguiente etapa ya estaba desbloqueada")
+        }
+    }
 }
