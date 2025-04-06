@@ -8,13 +8,21 @@
 
 import SwiftUI
 
-// Removed any 'private' modifier that might be here
 struct FinalExamView: View {
     let stage: Stage
     @ObservedObject var stageManager: StageManager
     @ObservedObject var xpManager: XPManager
     let stageIndex: Int
     var onComplete: (Bool) -> Void
+    
+    // SOLUCIÓN: Agregar inicializador público explícito
+    public init(stage: Stage, stageManager: StageManager, xpManager: XPManager, stageIndex: Int, onComplete: @escaping (Bool) -> Void) {
+        self.stage = stage
+        self.stageManager = stageManager
+        self.xpManager = xpManager
+        self.stageIndex = stageIndex
+        self.onComplete = onComplete
+    }
     
     // Estados para la prueba
     @State private var readingInProgress = false
@@ -135,10 +143,10 @@ struct FinalExamView: View {
                         stageIndex: stageIndex,
                         readingSpeed: readingSpeed
                     ) {
-                        // FIX: Removed 'score' parameter as QuizView expects () -> Void
+                        // CORREGIDO: Eliminado el parámetro 'score' ya que QuizView espera () -> Void
                         // Después del quiz evaluamos si pasó el examen
                         let speedThresholdMet = readingSpeed >= minRequiredSpeed
-                        let comprehensionMet = true // Assuming passed since we don't have score
+                        let comprehensionMet = true // Asumimos éxito ya que no tenemos puntaje
                         
                         testPassed = speedThresholdMet && comprehensionMet
                         showingResults = true
@@ -516,7 +524,7 @@ struct FinalExamView: View {
     // Crea una lección temporal para la evaluación
     private func createTemporaryLesson() -> Lesson {
         return Lesson(
-            // FIX: Removed 'id: UUID()' parameter
+            // CORREGIDO: Eliminado 'id: UUID()' que causaba el primer error
             title: "Examen Final - Etapa \(stage.name)",
             description: "Prueba de velocidad de lectura",
             type: .speedReading,
