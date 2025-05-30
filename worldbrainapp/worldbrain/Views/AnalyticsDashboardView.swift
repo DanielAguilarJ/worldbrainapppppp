@@ -502,9 +502,11 @@ struct AchievementCard: View {
                 .lineLimit(2)
                 .foregroundColor(.primary)
             
-            Text(achievement.earnedDate, style: .date)
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            if let earnedDate = achievement.earnedDate {
+                Text(earnedDate, style: .date)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding()
         .background(
@@ -547,53 +549,19 @@ extension AnalyticsMetric {
     }
 }
 
-extension SkillType {
-    var color: Color {
-        switch self {
-        case .readingSpeed:
-            return .blue
-        case .comprehension:
-            return .green
-        case .retention:
-            return .purple
-        case .eyeMovement:
-            return .orange
-        case .peripheralVision:
-            return .red
-        case .focus:
-            return .cyan
-        }
-    }
-    
-    var displayName: String {
-        switch self {
-        case .readingSpeed:
-            return "Velocidad de lectura"
-        case .comprehension:
-            return "Comprensión"
-        case .retention:
-            return "Retención"
-        case .eyeMovement:
-            return "Movimiento ocular"
-        case .peripheralVision:
-            return "Visión periférica"
-        case .focus:
-            return "Concentración"
-        }
-    }
-}
-
 extension AchievementCategory {
     var color: Color {
         switch self {
         case .speed:
             return .blue
-        case .accuracy:
-            return .green
         case .consistency:
             return .orange
-        case .milestone:
+        case .improvement:
+            return .green
+        case .mastery:
             return .purple
+        case .social:
+            return .cyan
         case .special:
             return .pink
         }

@@ -163,7 +163,7 @@ class AnalyticsManager: ObservableObject {
                 title: "Precisión Perfecta",
                 description: "90% de precisión en comprensión",
                 iconName: "target",
-                category: .accuracy,
+                category: .mastery,
                 isUnlocked: true,
                 earnedDate: Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date(),
                 requirements: ["Mantener 90% precisión en 10 sesiones"]

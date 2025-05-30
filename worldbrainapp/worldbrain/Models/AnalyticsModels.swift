@@ -106,10 +106,10 @@ enum SkillType: String, CaseIterable, Identifiable {
         switch self {
         case .readingSpeed: return "speedometer"
         case .comprehension: return "brain.head.profile"
-        case .visualField: return "eye.circle"
         case .retention: return "bookmark.circle"
         case .eyeMovement: return "eye.trianglebadge.exclamationmark"
-        case .concentration: return "target"
+        case .peripheralVision: return "eye.circle"
+        case .focus: return "target"
         }
     }
     
@@ -117,10 +117,10 @@ enum SkillType: String, CaseIterable, Identifiable {
         switch self {
         case .readingSpeed: return .blue
         case .comprehension: return .green
-        case .visualField: return .purple
         case .retention: return .orange
         case .eyeMovement: return .red
-        case .concentration: return .indigo
+        case .peripheralVision: return .purple
+        case .focus: return .indigo
         }
     }
     
@@ -128,10 +128,21 @@ enum SkillType: String, CaseIterable, Identifiable {
         switch self {
         case .readingSpeed: return "PPM"
         case .comprehension: return "%"
-        case .visualField: return "caracteres"
         case .retention: return "%"
         case .eyeMovement: return "movimientos/min"
-        case .concentration: return "puntos"
+        case .peripheralVision: return "caracteres"
+        case .focus: return "puntos"
+        }
+    }
+    
+    var displayName: String {
+        switch self {
+        case .readingSpeed: return "Velocidad de lectura"
+        case .comprehension: return "Comprensión"
+        case .retention: return "Retención"
+        case .eyeMovement: return "Movimiento ocular"
+        case .peripheralVision: return "Visión periférica"
+        case .focus: return "Concentración"
         }
     }
 }
@@ -204,13 +215,13 @@ struct Achievement: Identifiable {
     let id = UUID()
     var title: String
     var description: String
-    var icon: String
+    var iconName: String // Cambiado de 'icon' a 'iconName' para consistencia
     var isUnlocked: Bool
-    var unlockedDate: Date?
+    var earnedDate: Date? // Cambiado de 'unlockedDate' a 'earnedDate'
     var category: AchievementCategory
     var rarity: AchievementRarity
     var progress: Double // 0.0 a 1.0 para logros en progreso
-    var requirement: String
+    var requirements: [String] // Cambiado de 'requirement' String a 'requirements' [String]
 }
 
 enum AchievementCategory: String, CaseIterable {
