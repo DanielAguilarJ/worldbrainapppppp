@@ -417,38 +417,11 @@ class AchievementManager: ObservableObject {
     
     // Logros disponibles con sus condiciones
     var availableAchievements: [Achievement] {
-        [
-            Achievement(
-                id: "first_exercise",
-                title: "Primer ejercicio",
-                description: "Completaste tu primer ejercicio",
-                icon: "star.fill",
-                color: .yellow,
-                isUnlocked: { xp, sessions, streak in sessions >= 1 }
-            ),
-            Achievement(
-                id: "memory_master",
-                title: "Maestro de la memoria",
-                description: "Completa 10 ejercicios de retención",
-                icon: "brain.head.profile",
-                color: .green,
-                isUnlocked: { xp, sessions, streak in sessions >= 10 }
-            ),
-            Achievement(
-                id: "speed_reading",
-                title: "Velocidad lectora",
-                description: "Alcanza 300 puntos de XP",
-                icon: "speedometer",
-                color: .red,
-                isUnlocked: { xp, sessions, streak in xp >= 300 }
-            ),
-            Achievement(
-                id: "weekly_streak",
-                title: "Racha semanal",
-                description: "7 días seguidos de práctica",
-                icon: "calendar.badge.clock",
-                color: .blue,
-                isUnlocked: { xp, sessions, streak in streak >= 7 }
+        let baseAchievements = [
+            ("first_exercise", "Primer ejercicio", "Completaste tu primer ejercicio", "star.fill", AchievementCategory.special, AchievementRarity.common, { (xp: Int, sessions: Int, streak: Int) in sessions >= 1 }),
+            ("memory_master", "Maestro de la memoria", "Completa 10 ejercicios de retención", "brain.head.profile", AchievementCategory.mastery, AchievementRarity.rare, { (xp: Int, sessions: Int, streak: Int) in sessions >= 10 }),
+            ("speed_reading", "Velocidad lectora", "Alcanza 300 puntos de XP", "speedometer", AchievementCategory.speed, AchievementRarity.epic, { (xp: Int, sessions: Int, streak: Int) in xp >= 300 }),
+            ("weekly_streak", "Racha semanal", "7 días seguidos de práctica", "calendar.badge.clock", AchievementCategory.consistency, AchievementRarity.rare, { (xp: Int, sessions: Int, streak: Int) in streak >= 7 })
             )
         ]
     }
@@ -471,19 +444,19 @@ class AchievementManager: ObservableObject {
                 ActivityManager.addActivity(
                     name: "¡Logro desbloqueado: \(achievement.title)!",
                     xp: 50, // XP de bonificación por logro
-                    icon: achievement.icon
+                    icon: achievement.iconName
                 )
             }
         }
     }
     
     func isAchievementUnlocked(id: String) -> Bool {
-        return unlockedAchievements.contains { $0.id == id }
+        return unlockedAchievements.contains { $0.id.uuidString == id }
     }
     
     private func unlockAchievement(_ id: String) {
         // Buscar el logro en la lista de disponibles
-        if let achievement = availableAchievements.first(where: { $0.id == id }) {
+        if let achievement = availableAchievements.first(where: { $0.id.uuidString == id }) {
             // Añadir a los desbloqueados
             unlockedAchievements.append(achievement)
             
@@ -497,29 +470,18 @@ class AchievementManager: ObservableObject {
            let achievementIds = try? JSONDecoder().decode([String].self, from: data) {
             // Convertir los IDs desbloqueados en objetos Achievement
             unlockedAchievements = availableAchievements.filter { achievement in
-                achievementIds.contains(achievement.id)
+                achievementIds.contains(achievement.id.uuidString)
             }
         }
     }
     
     private func saveUnlockedAchievements() {
         // Guardar solo los IDs de los logros desbloqueados
-        let achievementIds = unlockedAchievements.map { $0.id }
+        let achievementIds = unlockedAchievements.map { $0.id.uuidString }
         if let data = try? JSONEncoder().encode(achievementIds) {
             UserDefaults.standard.set(data, forKey: "unlockedAchievements")
         }
     }
-}
-
-// MARK: - Modelo de logro
-
-struct Achievement: Identifiable {
-    let id: String
-    let title: String
-    let description: String
-    let icon: String
-    let color: Color
-    let isUnlocked: (Int, Int, Int) -> Bool // (xp, sessions, streak) -> isUnlocked
 }
 
 // MARK: - Vista de logros
@@ -539,14 +501,14 @@ struct AchievementsView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 15) {
                     ForEach(achievementManager.availableAchievements) { achievement in
-                        let isUnlocked = achievement.isUnlocked(xp, completedSessions, streakDays) ||
-                                        achievementManager.isAchievementUnlocked(id: achievement.id)
+                        let isUnlocked = achievement.isUnlocked ||
+                                        achievementManager.isAchievementUnlocked(id: achievement.id.uuidString)
                         
                         AchievementItem(
                             title: achievement.title,
                             description: achievement.description,
-                            icon: achievement.icon,
-                            color: achievement.color,
+                            icon: achievement.iconName,
+                            category: achievement.category,
                             isUnlocked: isUnlocked
                         )
                     }
@@ -566,14 +528,31 @@ struct AchievementItem: View {
     let title: String
     let description: String
     let icon: String
-    let color: Color
+    let category: AchievementCategory
     let isUnlocked: Bool
+    
+    private var categoryColor: Color {
+        switch category {
+        case .speed:
+            return .red
+        case .consistency:
+            return .blue
+        case .improvement:
+            return .green
+        case .mastery:
+            return .purple
+        case .social:
+            return .orange
+        case .special:
+            return .yellow
+        }
+    }
     
     var body: some View {
         VStack(alignment: .center, spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(isUnlocked ? color : Color.gray.opacity(0.5))
+                    .fill(isUnlocked ? categoryColor : Color.gray.opacity(0.5))
                     .frame(width: 60, height: 60)
                 
                 Image(systemName: icon)
@@ -850,7 +829,23 @@ struct ActivityHistoryView: View {
                     date: "Hoy",
                     xp: 50,
                     icon: "star.fill"
-                ),
+            ]
+        
+        return baseAchievements.map { (id, title, description, iconName, category, rarity, condition) in
+            let isUnlocked = condition(xp, completedSessions, streakDays)
+            return Achievement(
+                title: title,
+                description: description,
+                iconName: iconName,
+                isUnlocked: isUnlocked,
+                earnedDate: isUnlocked ? Date() : nil,
+                category: category,
+                rarity: rarity,
+                progress: isUnlocked ? 1.0 : 0.5,
+                requirements: [description]
+            )
+        }
+    }
                 Activity(
                         name: "Completa tu primer ejercicio",
                         date: "Pendiente",

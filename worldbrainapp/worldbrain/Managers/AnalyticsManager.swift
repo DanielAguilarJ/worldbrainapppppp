@@ -149,43 +149,47 @@ class AnalyticsManager: ObservableObject {
     private func updateRecentAchievements() {
         recentAchievements = [
             Achievement(
-                id: UUID(),
                 title: "Velocista",
                 description: "Alcanzaste 300 PPM",
                 iconName: "speedometer",
-                category: .speed,
                 isUnlocked: true,
                 earnedDate: Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date(),
+                category: .speed,
+                rarity: .rare,
+                progress: 1.0,
                 requirements: ["Leer a 300 PPM por 5 minutos"]
             ),
             Achievement(
-                id: UUID(),
                 title: "Precisión Perfecta",
                 description: "90% de precisión en comprensión",
                 iconName: "target",
-                category: .mastery,
                 isUnlocked: true,
                 earnedDate: Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date(),
+                category: .mastery,
+                rarity: .epic,
+                progress: 1.0,
                 requirements: ["Mantener 90% precisión en 10 sesiones"]
             ),
             Achievement(
-                id: UUID(),
                 title: "Constancia",
                 description: "7 días consecutivos de práctica",
                 iconName: "calendar.badge.checkmark",
-                category: .consistency,
                 isUnlocked: true,
                 earnedDate: Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date(),
+                category: .consistency,
+                rarity: .common,
+                progress: 1.0,
                 requirements: ["Practicar 7 días seguidos"]
             ),
             Achievement(
-                id: UUID(),
                 title: "Concentración Máxima",
                 description: "45 minutos sin distracciones",
                 iconName: "eye",
-                category: .special,
                 isUnlocked: true,
                 earnedDate: Date(),
+                category: .special,
+                rarity: .legendary,
+                progress: 1.0,
                 requirements: ["Mantener concentración por 45 min"]
             )
         ]
