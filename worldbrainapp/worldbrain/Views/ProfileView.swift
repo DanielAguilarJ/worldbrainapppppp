@@ -10,9 +10,11 @@ import SwiftUI
 struct ProfileView: View {
     @ObservedObject var xpManager: XPManager
     @StateObject private var achievementManager = AchievementManager()
+    @StateObject private var analyticsManager = AnalyticsManager()
     @AppStorage("userName") private var userName: String = "Usuario"
     @AppStorage("userEmail") private var userEmail: String = "usuario@ejemplo.com"
     @State private var showEditProfile = false
+    @State private var showAnalyticsDashboard = false
     @State private var selectedAvatar: Int = UserDefaults.standard.integer(forKey: "selectedAvatar")
     @State private var showingLogoutAlert = false
     
@@ -83,6 +85,12 @@ struct ProfileView: View {
                         timeSpent: formattedTimeSpent
                     )
                     
+                    // Botón para acceder a Analíticas Avanzadas
+                    AnalyticsPreviewCard(
+                        analyticsManager: analyticsManager,
+                        onShowDashboard: { showAnalyticsDashboard = true }
+                    )
+                    
                     // Logros
                     AchievementsView(
                         xp: xpManager.currentXP,
@@ -124,6 +132,9 @@ struct ProfileView: View {
                 selectedAvatar: $selectedAvatar,
                 avatars: avatars
             )
+        }
+        .sheet(isPresented: $showAnalyticsDashboard) {
+            AnalyticsDashboardView()
         }
         .alert("Cerrar sesión", isPresented: $showingLogoutAlert) {
             Button("Cancelar", role: .cancel) {}
@@ -1038,6 +1049,124 @@ struct ActivityHistoryView: View {
             }
         }
     }
+
+// MARK: - Analytics Preview Card
+struct AnalyticsPreviewCard: View {
+    @ObservedObject var analyticsManager: AnalyticsManager
+    let onShowDashboard: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("📊 Analíticas Avanzadas")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text("Descubre insights detallados de tu progreso")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                
+                Spacer()
+                
+                Button(action: onShowDashboard) {
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.white)
+                        .font(.title3)
+                }
+            }
+            
+            // Mini preview de estadísticas
+            if let userAnalytics = analyticsManager.userAnalytics {
+                HStack(spacing: 20) {
+                    MiniStatView(
+                        title: "Velocidad",
+                        value: "\(Int(userAnalytics.averageReadingSpeed)) PPM",
+                        icon: "speedometer"
+                    )
+                    
+                    MiniStatView(
+                        title: "Precisión",
+                        value: "\(Int(userAnalytics.averageAccuracy * 100))%",
+                        icon: "target"
+                    )
+                    
+                    MiniStatView(
+                        title: "Ranking",
+                        value: "#\(userAnalytics.globalRank)",
+                        icon: "trophy"
+                    )
+                }
+            } else {
+                HStack {
+                    ForEach(0..<3, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.2))
+                            .frame(height: 40)
+                    }
+                }
+                .redacted(reason: .placeholder)
+            }
+            
+            Button(action: onShowDashboard) {
+                HStack {
+                    Text("Ver Dashboard Completo")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    Image(systemName: "arrow.right")
+                        .font(.caption)
+                }
+                .foregroundColor(.white)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.white.opacity(0.2))
+                )
+            }
+        }
+        .padding()
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [Color.blue, Color.purple]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .onAppear {
+            analyticsManager.refreshAnalytics()
+        }
+    }
+}
+
+struct MiniStatView: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(.white)
+            
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.white.opacity(0.8))
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
 
     // Extension para añadir métodos a Color para que sea codificable
     extension Color {
