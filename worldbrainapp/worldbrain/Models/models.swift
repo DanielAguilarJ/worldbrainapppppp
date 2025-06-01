@@ -2,15 +2,15 @@
 //  Models.swift
 //  worldbrainapp
 //
-//  Estructuras de datos para Firestore
+//  Estructuras de datos para la aplicación
 //
 
 import Foundation
 
-/// Información de cada usuario en Firestore
+/// Información de cada usuario
 /// NOTA: 'Equatable' es esencial para usar .onChange(of:...) en SwiftUI
 struct FBUser: Codable, Identifiable, Equatable {
-    let id: String        // uid de Firebase
+    let id: String        // uid del usuario
     var email: String
     var premium: Bool
     var xp: Int

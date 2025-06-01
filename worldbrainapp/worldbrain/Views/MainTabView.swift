@@ -43,6 +43,13 @@ struct MainTabView: View {
                     Text("Novedades")
                 }
                 .tag(4)
+            
+            BackendConfigView()
+                .tabItem {
+                    Image(systemName: "gear.circle.fill")
+                    Text("Backend")
+                }
+                .tag(5)
         }
         .accentColor(.blue)
         .opacity(isLessonActive ? 0 : 1)
